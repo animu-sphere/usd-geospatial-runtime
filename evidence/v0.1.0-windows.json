@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "release": "v0.1.0",
+  "target": "windows-x86_64-msvc143-py313",
+  "runtime_digest": "sha256:904b8c12be5668fde17eda3f49c22b5cc30a253a5ffd3cf851d136ea7457f6bc",
+  "composed_artifact": "sha256:e0bc2fb1c6da23e8e3c722eefd6e6b0623aa7c0d0679e41e30a82152e61e1c62",
+  "composed_oci_manifest": "sha256:182e5382cd5096a1f223f6ea65fbd1460d2fc249d68accf6e9f83281404ec3f3",
+  "status": "passed",
+  "clean_public_input_compose": true,
+  "clean_composed_artifact_reconstruction": true,
+  "checks": {
+    "sdk": "passed",
+    "http": {
+      "status": "passed",
+      "cold_body_bytes": 73,
+      "warm_body_bytes": 0,
+      "persistent_cache_hit": true
+    },
+    "pointcloud": {
+      "status": "passed",
+      "formats": ["las", "laz", "ply", "copc"]
+    },
+    "tier2": {
+      "status": "passed",
+      "scenarios": 10,
+      "scenarios_with_range_requests": 9
+    },
+    "raster": {
+      "status": "passed",
+      "format": "tif",
+      "width": 2,
+      "height": 2,
+      "crs": "EPSG:32654",
+      "authored_layer_digest": "sha256:0d16c58282c69b3a0620b3d20bbb32b3a3bc16289efce5cfe1a2e191bf08817e"
+    }
+  }
+}

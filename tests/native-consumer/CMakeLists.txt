@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.23)
+project(GeospatialSdkConsumer LANGUAGES CXX)
+find_package(usdAssetIo CONFIG REQUIRED)
+add_executable(geospatial-sdk-consumer main.cpp)
+target_link_libraries(geospatial-sdk-consumer PRIVATE usdasset::io)
+target_compile_features(geospatial-sdk-consumer PRIVATE cxx_std_17)

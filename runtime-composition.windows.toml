@@ -1,0 +1,59 @@
+schema = "openstrata.runtime-composition/v1alpha1"
+
+[composition]
+name = "usd-geospatial-runtime"
+target = "windows-x86_64-msvc143-py313"
+
+[[requirements]]
+capability = "usd"
+version = "26.08"
+[[requirements]]
+capability = "usd-resolver:http"
+version = ">=0.5,<0.6"
+[[requirements]]
+capability = "usd-fileformat:las"
+[[requirements]]
+capability = "usd-fileformat:laz"
+[[requirements]]
+capability = "usd-fileformat:copc"
+[[requirements]]
+capability = "usd-fileformat:ply"
+[[requirements]]
+capability = "usd-fileformat:tif"
+
+[[artifacts]]
+artifact = "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c"
+source = "oci://ghcr.io/animu-sphere/openstrata-runtime-cy2026-usd@sha256:1c63272c417f43fbded784b6ab88cb5dac6bb58e87d9e69e254f10b87cff3143"
+
+[[artifacts]]
+artifact = "sha256:2f9887eff977d1a800b23a0a0c35d578097c465535a933aa407f31644ee064c8"
+source = "oci://ghcr.io/animu-sphere/usd-http-resolver@sha256:2622f2ba04f01b530a447644271b23242dcbf4c4f37f986ade0d517da6a38540"
+
+[[artifacts]]
+artifact = "sha256:53df2095a1b2334f4d93b7eaa3b6533c61510195548e8b5e968d91b4c4e91a8a"
+source = "oci://ghcr.io/animu-sphere/usd-http-resolver@sha256:bf309dc66767d31898b6817e41599919bbc39f6be22c15865024ebd7459b1cc0"
+
+[[artifacts]]
+artifact = "sha256:fbf496e0c7f0f957e09452a856112bbfc443dd6db4d0c83c548871d6edb43234"
+source = "oci://ghcr.io/animu-sphere/usd-http-resolver@sha256:321373f9f7bb69a1a5534f5cf0abe218e329d0beab7a4724de9c66cd107fb045"
+
+[[artifacts]]
+artifact = "sha256:79a343a0e76a07bcdcf500a064cefefe1665d07bb2f1ec9ea966d23acc373027"
+source = "oci://ghcr.io/animu-sphere/usd-http-resolver@sha256:d38e7cc842ea3634ae8db777ed275f8640f4411f03fc97bb2a9180f058ebbf95"
+
+[[artifacts]]
+artifact = "sha256:9954ff6788ae1987203bd05e8753c8265523cbad65c2f0a802bbfadb05bbef9e"
+source = "oci://ghcr.io/animu-sphere/usd-pointcloud-plugins@sha256:0002805ded0c1ce5483ab4d7585e2d09730291bebfb9aae38b48829ab6e8df8e"
+
+[[artifacts]]
+artifact = "sha256:39c9d553ca60dc5d1f02e698377622d7567574c950d98a3306a010ca97819b28"
+source = "oci://ghcr.io/animu-sphere/usd-raster-plugins@sha256:29bb6712a73aa422c1196cb7cbaa64403703dbeb7af64f47c5d9536c773024de"
+
+[providers]
+usd = "openstrata-cy2026-windows-x86_64-py313-usd"
+"usd-resolver:http" = "usd-http-resolver"
+"usd-fileformat:las" = "usd-pointcloud-plugins"
+"usd-fileformat:laz" = "usd-pointcloud-plugins"
+"usd-fileformat:copc" = "usd-pointcloud-plugins"
+"usd-fileformat:ply" = "usd-pointcloud-plugins"
+"usd-fileformat:tif" = "usd-raster-plugins"
