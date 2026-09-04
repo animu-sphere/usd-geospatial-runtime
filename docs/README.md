@@ -12,6 +12,7 @@ category that matches the question you are trying to answer.
 | What should be implemented next, and in what order? | [Roadmap](roadmap/) | [Current priorities](roadmap/current.md) |
 | Which targets, capabilities, and formats are supported? | [Reference](reference/) | [Support matrix](reference/support-matrix.md) |
 | What was shipped in a particular version? | [Releases](releases/) | [Release records](releases/README.md) |
+| What is the machine-readable contract for tooling? | [Schemas](../schemas/) | [Schema index](../schemas/README.md) |
 | How should contributors maintain these documents? | [Contributing](contributing/) | [Documentation guidelines](contributing/documentation.md) |
 
 ## Reading paths

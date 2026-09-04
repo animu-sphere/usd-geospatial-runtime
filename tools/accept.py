@@ -1,10 +1,52 @@
-"""Run the installed probes for the v0.1.0 Windows composition."""
+"""Run the installed acceptance probes against a composed runtime prefix.
+
+The runner writes an acceptance report that conforms to
+`schemas/acceptance-report.v1.json`. The report is generated output, not a
+release record: release evidence is written only after the published composed
+artifact has also been pulled, verified, and reconstructed.
+"""
 
 import argparse
 import json
 from pathlib import Path
 import subprocess
 import sys
+
+CONTRACT = "usd-geospatial-runtime.acceptance/v1"
+REQUIRED_CHECKS = ("sdk", "http", "pointcloud", "tier2", "raster")
+
+
+def new_report(runtime_digest, target=None):
+    """Return an acceptance report with no check recorded yet."""
+    return {
+        "schema": 1,
+        "contract": CONTRACT,
+        "runtime_digest": runtime_digest,
+        "target": target or "unknown",
+        "status": "failed",
+        "complete": False,
+        "required_checks": list(REQUIRED_CHECKS),
+        "checks": {},
+    }
+
+
+def record_check(report, name, exit_code, output):
+    report["checks"][name] = {
+        "status": "passed" if exit_code == 0 else "failed",
+        "exit_code": exit_code,
+        "output": output,
+    }
+
+
+def finalize(report, error=None):
+    """Set the terminal status from the recorded checks."""
+    if error is not None:
+        report["error"] = str(error)
+    checks = report["checks"]
+    passed = all(checks.get(name, {}).get("status") == "passed" for name in report["required_checks"])
+    report["complete"] = bool(passed and error is None)
+    report["status"] = "passed" if report["complete"] else "failed"
+    return report
 
 
 def verify_tier2(record):
@@ -44,24 +86,18 @@ def main():
         parser.error("evidence must be outside the immutable prefix")
     output.mkdir(parents=True, exist_ok=False)
     lock = json.loads((prefix / "metadata/composition.lock.json").read_text(encoding="utf-8"))
-    report = {
-        "schema": 1,
-        "scope": "v0.1.0-windows-acceptance",
-        "runtime_digest": lock["runtime_digest"],
-        "status": "failed",
-        "full_v0_1_0_acceptance": False,
-        "commands": [],
-    }
+    report = new_report(lock["runtime_digest"], lock.get("resolved", {}).get("target"))
 
     def run(label, command):
         result = subprocess.run(command, capture_output=True, text=True, timeout=180)
         (output / f"{label}.json").write_text(result.stdout, encoding="utf-8")
         (output / f"{label}.stderr.txt").write_text(result.stderr, encoding="utf-8")
-        report["commands"].append({"probe": label, "exit_code": result.returncode})
+        record_check(report, label, result.returncode, f"{label}.json")
         if result.returncode:
             raise RuntimeError(f"{label} failed; see {output / (label + '.json')}")
         return json.loads(result.stdout)
 
+    failure = None
     try:
         run("sdk", [args.ost, "--json", "runtime", "validate", "--composition", str(prefix), "--sdk"])
         base = [args.ost, "--json", "runtime", "exec", "--composition", str(prefix), "--", str(args.python.resolve())]
@@ -74,14 +110,17 @@ def main():
                              "--resolver-resources", str(prefix / "bundles/http-resolver/plugin/resources/httpResolver"),
                              "--copc-resources", str(prefix / "bundles/pointcloud-copc/plugin/resources/pointcloud-copc"),
                              "--output", str(output / "tier2-measurements.json")])
-        verify_tier2(json.loads((output / "tier2-measurements.json").read_text(encoding="utf-8")))
+        try:
+            verify_tier2(json.loads((output / "tier2-measurements.json").read_text(encoding="utf-8")))
+        except (ValueError, KeyError, StopIteration):
+            report["checks"]["tier2"]["status"] = "failed"
+            raise
         run("raster", base + [str(prefix / "share/usd-raster-plugins/probes/packaged_probe.py"),
                               "--prefix", str(prefix)])
-        report["status"] = "passed"
-        report["full_v0_1_0_acceptance"] = True
-    except (RuntimeError, ValueError, OSError, subprocess.TimeoutExpired) as error:
-        report["error"] = str(error)
+    except (RuntimeError, ValueError, KeyError, StopIteration, OSError, subprocess.TimeoutExpired) as error:
+        failure = error
     finally:
+        finalize(report, failure)
         (output / "summary.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))
     return 0 if report["status"] == "passed" else 1

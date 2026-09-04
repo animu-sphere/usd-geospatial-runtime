@@ -45,6 +45,23 @@ the SDK, HTTP cold/warm cache behavior, LAS/LAZ/PLY/COPC reads, ten HTTP/COPC
 validator scenarios, and GeoTIFF metadata authoring. Python 3.13 is an explicit
 host prerequisite and is not bundled.
 
+## Inspect and validate
+
+`runtime-metadata.windows.json` describes the released target in machine-readable
+form: canonical target identity, immutable composition and artifact identities,
+component versions, and the component that provides each capability. It is
+generated from the manifest, the lock, and the accepted release evidence, and it
+is validated against the schemas in `schemas/`.
+
+```powershell
+python tools/runtime_metadata.py --write
+python tools/validate_metadata.py
+python tests/tooling/test_metadata_tools.py
+```
+
+These commands run in CI and need only CPython 3.13; the repository installs no
+Python packages.
+
 ## Scope limits
 
 This release makes no Linux or macOS composition claim. Its synthetic fixtures

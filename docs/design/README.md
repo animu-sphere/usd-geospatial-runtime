@@ -9,3 +9,4 @@ not been implemented. Current behavior belongs in [architecture/](../architectur
 | [sdk.md](sdk.md) | Proposed | C++ SDK, diagnostics, introspection, and binding surface. |
 | [distribution.md](distribution.md) | Proposed | Artifact and language-package delivery model. |
 | [testing.md](testing.md) | Proposed | Layered testing, fixtures, and release acceptance. |
+| [composition-layout.md](composition-layout.md) | Proposed | Target-aware manifest, lock, and metadata layout. |

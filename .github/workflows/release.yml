@@ -24,27 +24,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="$(tr -d '[:space:]' < VERSION)"
-          test "${GITHUB_REF_NAME}" = "v${version}"
-          test -f "docs/releases/v${version}.md"
-          python -m py_compile tools/accept.py
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          import tomllib
-          manifest = tomllib.loads(Path('runtime-composition.windows.toml').read_text())
-          lock = json.loads(Path('runtime.windows.lock.json').read_text())
-          evidence = json.loads(Path('evidence/v0.1.0-windows.json').read_text())
-          assert lock['manifest']['composition'] == manifest['composition']
-          assert lock['manifest']['providers'] == manifest['providers']
-          assert {x['artifact']: x['source'] for x in lock['manifest']['artifacts']} == {x['artifact']: x['source'] for x in manifest['artifacts']}
-          assert {tuple(sorted(x.items())) for x in lock['manifest']['requirements']} == {tuple(sorted(x.items())) for x in manifest['requirements']}
-          assert lock['runtime_digest'] == evidence['runtime_digest']
-          assert evidence['status'] == 'passed'
-          assert len(manifest['artifacts']) == 7
-          for item in manifest['artifacts']:
-              assert item['source'].startswith('oci://') and '@sha256:' in item['source']
-          PY
+          python -m compileall -q tools tests/tooling
+          python tools/validate_metadata.py --release "${GITHUB_REF_NAME}"
+          python tests/tooling/test_metadata_tools.py
       - name: Assemble source release
         shell: bash
         run: |
@@ -54,7 +36,8 @@ jobs:
           git archive --format=tar.gz --prefix="usd-geospatial-runtime-${version}/" \
             -o "dist-release/usd-geospatial-runtime-${version}-src.tar.gz" "${GITHUB_REF_NAME}"
           cp LICENSE runtime-composition.windows.toml runtime.windows.lock.json \
-            evidence/v0.1.0-windows.json dist-release/
+            runtime-metadata.windows.json dist-release/
+          cp "evidence/v${version}-"*.json dist-release/
           cp "docs/releases/v${version}.md" dist-release/RELEASE_NOTES.md
           cd dist-release
           find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\n' \
