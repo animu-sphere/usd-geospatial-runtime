@@ -10,6 +10,7 @@ here are stable, and human-readable text is not a contract.
 | [release-evidence.v1.json](release-evidence.v1.json) | The immutable acceptance result committed for a released target. | `evidence/*.json` |
 | [acceptance-report.v1.json](acceptance-report.v1.json) | The generated report written by `tools/accept.py` for a composed prefix. | Acceptance output, not committed |
 | [runtime-info.v1.json](runtime-info.v1.json) | What the SDK reports about the runtime it found: the introspection subset of runtime metadata. | `usd_geospatial::RuntimeInfo::to_json` output |
+| [formats.v1.json](formats.v1.json) | Every file extension a runtime knows about and which of the composition and OpenUSD claimed it. | `usd_geospatial::formats_to_json` output |
 
 ## Validation
 
@@ -22,10 +23,16 @@ python tools/validate_metadata.py
 python tests/tooling/test_metadata_tools.py
 ```
 
-The runtime-info schema is enforced from both sides. `sdk/core/tests/data/runtime-info.json`
-is the document the SDK is asserted to produce, and the tooling tests validate
-that same file against the schema, so the C++ serializer and the schema cannot
-drift apart.
+The runtime-info and formats schemas are enforced from both sides.
+`sdk/core/tests/data/runtime-info.json` and `sdk/core/tests/data/formats.json`
+are the documents the SDK is asserted to produce, and the tooling tests validate
+those same files against their schemas, so the C++ serializers and the schemas
+cannot drift apart.
+
+A formats document depends on which plugins loaded, which no committed file can
+capture. The committed one is produced by the core lane from a fixture lock and
+a fixed registered-extension list, so it is reproducible and still exercises
+every state -- including the composed format that did not load.
 
 Validation uses `tools/jsonschema_lite.py`, a small validator limited to the
 keyword subset these schemas use. It walks the whole schema before validating,

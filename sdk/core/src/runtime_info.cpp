@@ -429,6 +429,20 @@ Result<RuntimeInfo> runtime_info(const std::string& prefix) {
                 .with("expected", lock_path));
     }
 
+    // A path that exists and is not a regular file -- a directory named like
+    // the lock -- is refused here rather than left to the stream, because
+    // whether opening a directory fails, or succeeds and reads as empty,
+    // differs by platform and standard library. The condition is the same one
+    // either outcome would eventually report; naming it here makes it the same
+    // on every host. A dangling symlink never reaches this: exists() follows
+    // links, so it is already runtime_not_found above.
+    if (!std::filesystem::is_regular_file(lock_path, status)) {
+        return Result<RuntimeInfo>::failure(
+            Diagnostic(DiagnosticCode::runtime_metadata_unreadable, Subsystem::sdk,
+                       "the composition lock is not a regular file")
+                .with("path", lock_path));
+    }
+
     std::ifstream file(lock_path, std::ios::binary);
     if (!file) {
         return Result<RuntimeInfo>::failure(

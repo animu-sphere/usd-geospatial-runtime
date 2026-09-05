@@ -9,18 +9,25 @@
 // The test data directory is argv[1]; CMake passes it.
 
 #include <usd_geospatial/diagnostics.h>
+#include <usd_geospatial/format_support.h>
 #include <usd_geospatial/result.h>
 #include <usd_geospatial/runtime_info.h>
 
 #include "json.h"
 
 #include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <set>
 #include <sstream>
 #include <string>
+#include <system_error>
+#include <vector>
 
 namespace {
 
@@ -234,11 +241,12 @@ void test_runtime_info_document() {
           "sha256:5555555555555555555555555555555555555555555555555555555555555555");
 
     // Sorted, so two materializations of one runtime serialize identically.
-    CHECK(info.components().size() == 3);
+    CHECK(info.components().size() == 4);
     CHECK(info.components()[0].id == "example-asset-io");
-    CHECK(info.components()[2].id == "example-vector-plugins");
-    CHECK(info.capabilities().size() == 3);
+    CHECK(info.components()[3].id == "example-vector-plugins");
+    CHECK(info.capabilities().size() == 4);
     CHECK(info.capabilities()[0].name == "library:example-asset-io");
+    CHECK(info.capabilities()[3].name == "usd-fileformat:geojson");
 
     CHECK(info.component("example-usd") != nullptr);
     CHECK(info.component("example-usd")->kind == "runtime");
@@ -325,6 +333,106 @@ void test_runtime_info_rejects_bad_input() {
     }
 }
 
+/// The two answers to "which formats does this runtime have" are joined, not
+/// collapsed. A composed format OpenUSD produced no format for stays visible
+/// as `not_loaded` and a dispatched format the composition never asked for
+/// stays visible as `undeclared`, because reporting either list alone -- or
+/// their intersection -- erases exactly the case a caller needs to act on.
+void test_format_support() {
+    Result<RuntimeInfo> runtime =
+        RuntimeInfo::from_lock_json(read("composition.lock.json"), "/example/prefix");
+    CHECK(runtime.ok());
+
+    // OpenUSD's own formats plus one of the fixture's two composed plugins:
+    // this is a runtime whose vector plugin is installed and did not load.
+    const std::vector<std::string> registered = {"copc", "usda", "usdc"};
+    const std::vector<Format> formats = format_support(runtime.value(), registered);
+    CHECK(formats.size() == 4);
+
+    CHECK(formats[0].extension == "copc");
+    CHECK(formats[0].state == FormatState::available);
+    CHECK(formats[0].usable());
+    CHECK(formats[0].component == "example-pointcloud-plugins");
+
+    CHECK(formats[1].extension == "geojson");
+    CHECK(formats[1].state == FormatState::not_loaded);
+    CHECK(formats[1].composed() && !formats[1].registered());
+    // A format that is composed and absent names what to look at, which is the
+    // whole reason the state is reported instead of the format being dropped.
+    CHECK(formats[1].capability == "usd-fileformat:geojson");
+    CHECK(formats[1].component == "example-vector-plugins");
+    CHECK(formats[1].artifact.rfind("sha256:", 0) == 0);
+
+    CHECK(formats[3].extension == "usdc");
+    CHECK(formats[3].state == FormatState::undeclared);
+    CHECK(!formats[3].composed() && formats[3].registered());
+    CHECK(formats[3].component.empty());
+
+    // The committed document is the shared contract, the same way
+    // runtime-info.json is: schemas/formats.v1.json validates it in the Python
+    // tooling tests and this asserts that the SDK is what produces it.
+    CHECK(formats_to_json(formats) == read("formats.json"));
+    CHECK(std::string(formats_schema()) == "usd-geospatial-runtime.formats/v1");
+
+    // Extensions are compared, not displayed, so they are normalized once: a
+    // caller's ".USDA" is OpenUSD's "usda" and must not become a second entry,
+    // and a repeat must not promote an undeclared format to a composed one.
+    const std::vector<Format> noisy =
+        format_support(runtime.value(), {"usda", ".USDA", "", "COPC"});
+    CHECK(noisy.size() == 3);
+    CHECK(noisy[0].extension == "copc" && noisy[0].usable());
+    CHECK(noisy[2].extension == "usda");
+    CHECK(noisy[2].state == FormatState::undeclared);
+
+    // A runtime that dispatches nothing still reports every format the
+    // composition declared. That is the difference between "this runtime does
+    // not read GeoJSON" and "this runtime is broken".
+    const std::vector<Format> nothing = format_support(runtime.value(), {});
+    CHECK(nothing.size() == 2);
+    for (const Format& format : nothing) {
+        CHECK(format.state == FormatState::not_loaded);
+    }
+
+    // A lock that spells a capability differently -- a capital letter here --
+    // still resolves to one format, and the entry names the capability its own
+    // extension implies. An entry that kept the lock's literal string would
+    // contradict its own `extension` and fail schemas/formats.v1.json.
+    std::string mutated = read("composition.lock.json");
+    const std::string spelling = "usd-fileformat:geojson";
+    const std::size_t at = mutated.find(spelling);
+    CHECK(at != std::string::npos);
+    mutated.replace(at, spelling.size(), "usd-fileformat:GeoJSON");
+    Result<RuntimeInfo> odd = RuntimeInfo::from_lock_json(mutated, "/example/prefix");
+    CHECK(odd.ok());
+    const std::vector<Format> spelled = format_support(odd.value(), {"geojson"});
+    CHECK(spelled.size() == 2);
+    CHECK(spelled[1].extension == "geojson");
+    CHECK(spelled[1].capability == "usd-fileformat:geojson");
+    CHECK(spelled[1].state == FormatState::available);
+}
+
+
+/// `open` reports the capability a composition would have to add and
+/// `format_support` reads the capability a composition did add. Both spell the
+/// name here, so the two cannot drift apart.
+void test_format_capability_names() {
+    CHECK(format_capability("copc") == "usd-fileformat:copc");
+    CHECK(format_capability(".TIF") == "usd-fileformat:tif");
+    CHECK(format_capability("").empty());
+
+    CHECK(format_extension("usd-fileformat:geojson") == "geojson");
+    CHECK(format_extension("usd-fileformat:").empty());
+    // A composed runtime resolves capabilities that are not file formats, and
+    // they are not reported as extensions of any kind.
+    CHECK(format_extension("usd").empty());
+    CHECK(format_extension("usd-resolver:http").empty());
+    CHECK(format_extension("library:example-asset-io").empty());
+
+    CHECK(std::string(format_state_name(FormatState::available)) == "available");
+    CHECK(std::string(format_state_name(FormatState::not_loaded)) == "not_loaded");
+    CHECK(std::string(format_state_name(FormatState::undeclared)) == "undeclared");
+}
+
 void test_runtime_info_from_prefix() {
     Result<RuntimeInfo> empty = runtime_info(std::string());
     CHECK(!empty.ok());
@@ -345,6 +453,38 @@ void test_runtime_info_from_prefix() {
     CHECK(std::string(runtime_info_schema()) == "usd-geospatial-runtime.runtime-info/v1");
 }
 
+/// A prefix that looks composed but whose lock cannot be read is its own
+/// condition, separate from "there is no runtime here".
+///
+/// The unreadable lock is a directory in the lock's place, because that is the
+/// one unreadable file every platform can produce without permissions or a
+/// privileged user. It is also why runtime_info() names the condition itself
+/// rather than leaving it to the stream: opening a directory fails on some
+/// platforms and succeeds and reads empty on others, and the caller must get
+/// the same code either way.
+void test_runtime_info_rejects_an_unreadable_lock() {
+    namespace fs = std::filesystem;
+    std::error_code status;
+    // The path is unique per process. Two runs of this suite at once -- a
+    // multi-config build, `ctest -j`, two CI jobs on one runner -- would
+    // otherwise delete each other's fixture and fail on the wrong condition.
+    const std::string unique =
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-" +
+        std::to_string(reinterpret_cast<std::uintptr_t>(&status));
+    const fs::path prefix =
+        fs::temp_directory_path(status) / ("usdgeospatial-unreadable-lock-" + unique);
+    CHECK(!status);
+    fs::create_directories(prefix / "metadata" / "composition.lock.json", status);
+    CHECK(!status);
+
+    Result<RuntimeInfo> result = runtime_info(prefix.string());
+    CHECK(!result.ok());
+    CHECK(result.error().code() == DiagnosticCode::runtime_metadata_unreadable);
+    CHECK(!result.error().detail("path").empty());
+
+    fs::remove_all(prefix, status);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -361,7 +501,10 @@ int main(int argc, char** argv) {
     test_runtime_info_document();
     test_bundled_python_is_read_not_asserted();
     test_runtime_info_rejects_bad_input();
+    test_format_support();
+    test_format_capability_names();
     test_runtime_info_from_prefix();
+    test_runtime_info_rejects_an_unreadable_lock();
 
     std::printf("usdGeospatialCore: %d checks passed\n", g_checks);
     return 0;

@@ -15,8 +15,11 @@ Status: proposed
 Only layers backed by implemented surfaces should be added to CI. The current
 repository implements composition and artifact acceptance checks, and the L3
 layer for the implemented part of the SDK: its OpenUSD-free lane is tested with
-no runtime present, and `open` is tested against a composed prefix. Binding
-layers remain future work.
+no runtime present, and `open` and `formats` are tested against a composed
+prefix. What splits an operation between the two lanes is what it needs, not
+convenience -- `formats` joins the composed capability list with the formats
+OpenUSD dispatches, and that join is tested without a runtime because only
+obtaining the second list needs one. Binding layers remain future work.
 
 ## Fixture policy
 

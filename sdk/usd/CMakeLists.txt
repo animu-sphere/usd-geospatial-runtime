@@ -2,10 +2,12 @@ cmake_minimum_required(VERSION 3.23)
 
 find_package(pxr CONFIG REQUIRED)
 
-# The OpenUSD lane: everything that needs a loaded runtime. It is one
-# translation unit because `open` is the only operation whose contract the
-# tests currently prove; `inspect` and `formats` join it when theirs do.
-add_library(usdGeospatial STATIC src/open.cpp)
+# The OpenUSD lane: everything that needs a loaded runtime. `open` and the
+# registered half of `formats` are here because both need OpenUSD loaded;
+# `inspect` joins them when its contract is proven by tests.
+add_library(usdGeospatial STATIC
+    src/formats.cpp
+    src/open.cpp)
 add_library(usdgeospatial::sdk ALIAS usdGeospatial)
 set_target_properties(usdGeospatial PROPERTIES
     EXPORT_NAME sdk

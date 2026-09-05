@@ -12,12 +12,15 @@
 // argv[1] is the composed runtime prefix and argv[2] is a readable fixture.
 
 #include <usd_geospatial/diagnostics.h>
+#include <usd_geospatial/formats.h>
 #include <usd_geospatial/open.h>
 #include <usd_geospatial/result.h>
 #include <usd_geospatial/runtime_info.h>
 
+#include <cstddef>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 int main(int argc, char** argv) {
     if (argc < 3) {
@@ -35,6 +38,20 @@ int main(int argc, char** argv) {
     std::printf("runtime %s %s\n", info.name().c_str(), info.identity().runtime_digest.c_str());
     std::printf("target %s, %zu components, %zu capabilities\n", info.target().id.c_str(),
                 info.components().size(), info.capabilities().size());
+
+    // formats() spans both lanes -- the composed half comes from the core
+    // library and the registered half from OpenUSD -- so calling it here is
+    // what proves the exported package carries both to an outside consumer.
+    const std::vector<usd_geospatial::Format> supported = usd_geospatial::formats(info);
+    std::size_t usable = 0;
+    for (const usd_geospatial::Format& format : supported) {
+        usable += format.usable() ? 1 : 0;
+    }
+    std::printf("%zu formats, %zu usable\n", supported.size(), usable);
+    if (usable == 0) {
+        std::fprintf(stderr, "the runtime reports no usable file format\n");
+        return 1;
+    }
 
     const usd_geospatial::Result<pxr::UsdStageRefPtr> stage = usd_geospatial::open(argv[2]);
     if (!stage) {

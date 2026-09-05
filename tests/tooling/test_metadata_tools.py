@@ -188,6 +188,90 @@ def test_runtime_info_document_describes_the_lock_it_was_read_from():
     assert info["target"]["usd_version"] == usd["version"]
 
 
+def formats_document():
+    return json.loads((SDK_TEST_DATA / "formats.json").read_text(encoding="utf-8"))
+
+
+def test_formats_schema_matches_the_document_the_sdk_emits():
+    """The formats report is held from both sides, the way runtime-info is.
+
+    `sdk/core/tests/test_core.cpp` asserts that `formats_to_json` produces this
+    exact text, and this asserts that the same text satisfies the schema.
+    """
+    document = schema("formats.v1.json")
+    assert not jsonschema_lite.errors_for(formats_document(), document)
+
+    record = formats_document()
+    record["formats"][0]["state"] = "loaded"
+    rejects(record, document, "a state outside the published set")
+
+    # The provider fields are what a caller reports when a composed format did
+    # not load, so a declared format cannot omit them,
+    record = formats_document()
+    del record["formats"][1]["component"]
+    rejects(record, document, "a declared format with no provider component")
+
+    # and an undeclared format cannot carry them, because no composition named
+    # a provider for it.
+    record = formats_document()
+    record["formats"][2]["component"] = "example-vector-plugins"
+    rejects(record, document, "an undeclared format with a provider")
+
+    record = formats_document()
+    record["formats"][0]["capability"] = "usd-resolver:http"
+    rejects(record, document, "a capability that is not a file format")
+
+    record = formats_document()
+    record["formats"][0]["artifact"] = "sha256:abc"
+    rejects(record, document, "an artifact that is not a sha256 digest")
+
+
+def test_formats_document_agrees_with_the_lock_it_was_read_from():
+    """One half of the report is the lock's provider table, joined not replaced.
+
+    The other half is what OpenUSD registered, which no committed document can
+    hold, so what is checked here is that every composed format is reported
+    exactly as the lock resolved it and that nothing else claims a provider.
+    """
+    lock = json.loads((SDK_TEST_DATA / "composition.lock.json").read_text(encoding="utf-8"))
+    providers = {
+        item["capability"]: item
+        for item in lock["resolved"]["providers"]
+        if item["capability"].startswith("usd-fileformat:")
+    }
+    formats = formats_document()["formats"]
+
+    assert [item["extension"] for item in formats] == sorted(
+        item["extension"] for item in formats
+    ), "formats must be sorted by extension so equal runtimes serialize equally"
+
+    declared = [item for item in formats if item["state"] != "undeclared"]
+    assert {item["capability"] for item in declared} == set(providers), (
+        "every file-format capability the lock resolves must be reported, and no others"
+    )
+    for item in declared:
+        source = providers[item["capability"]]
+        assert item["capability"] == "usd-fileformat:" + item["extension"]
+        assert item["component"] == source["component"]
+        assert item["version"] == source["version"]
+        assert item["artifact"] == source["digest"]
+
+    # The fixture is a runtime that resolved two format plugins in a process
+    # that registered one of them, so the document carries all three states. A
+    # fixture that lost one would stop covering the case this operation exists
+    # for: a plugin that is installed and did not load.
+    assert {item["state"] for item in formats} == {"available", "not_loaded", "undeclared"}
+
+    # The two documents describe one runtime, so the file formats they name
+    # cannot disagree.
+    composed = {
+        item["capability"]
+        for item in runtime_info_document()["capabilities"]
+        if item["capability"].startswith("usd-fileformat:")
+    }
+    assert composed == {item["capability"] for item in declared}
+
+
 def test_diagnostic_reference_matches_the_sdk_source():
     """The published code table cannot drift from the one the SDK compiles.
 

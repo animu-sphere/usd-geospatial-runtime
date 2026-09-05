@@ -83,7 +83,10 @@ runtime that is present -- its target, identities, components, and capabilities
 The failure codes are listed in
 [the diagnostics reference](docs/reference/diagnostics.md), and
 [sdk/README.md](sdk/README.md) covers building, testing, and consuming it.
-`open` and `runtime_info` exist today; `inspect` and `formats` do not.
+`formats` reports every extension the runtime knows about with the state that
+says whether the composition declared it, OpenUSD will dispatch it, or both, so
+a plugin that shipped and failed to load is visible before an asset is opened.
+`open`, `runtime_info`, and `formats` exist today; `inspect` does not.
 
 ## Scope limits
 

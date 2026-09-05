@@ -3,3 +3,7 @@
 # a runtime to exactly the committed document, and a CRLF checkout would break
 # that comparison on Windows without changing anything real.
 sdk/core/tests/data/*.json text eol=lf
+
+# fixtures/README.md publishes this fixture's digest, and a CRLF checkout would
+# change it without changing anything real.
+fixtures/malformed.usda text eol=lf
