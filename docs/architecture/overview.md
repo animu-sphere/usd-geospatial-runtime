@@ -7,9 +7,9 @@ The repository currently publishes one immutable OpenStrata composition for
 its asset I/O/cache dependencies, point-cloud FileFormat plugins for LAS, LAZ,
 COPC, and PLY, and a raster FileFormat plugin for GeoTIFF.
 
-It also implements the first part of the `usd_geospatial` C++ SDK: the failure
-vocabulary, `Result<T>`, `runtime_info`, and `open`. The repository does not yet
-implement the `inspect` or `formats` operations, a Python package, a Node
+It also implements most of the `usd_geospatial` C++ SDK: the failure
+vocabulary, `Result<T>`, `runtime_info`, `open`, and `formats`. The repository
+does not yet implement the `inspect` operation, a Python package, a Node
 package, a Wasm module, a vector provider, or a Linux/macOS composition.
 
 ## Repository surfaces
@@ -19,15 +19,16 @@ package, a Wasm module, a vector provider, or a Linux/macOS composition.
 | `runtime-composition.windows.toml` | Declares the target, required capabilities, immutable candidate artifacts, and explicit providers. |
 | `runtime.windows.lock.json` | Pins resolution and artifact identities for reproducible composition. |
 | `runtime-metadata.windows.json` | Generated machine-readable target identity, immutable identities, components, and capabilities. |
-| `schemas/` | JSON Schema definitions for runtime metadata, release evidence, and acceptance reports. |
+| `schemas/` | JSON Schema definitions for runtime metadata, release evidence, acceptance reports, and the documents the SDK serializes. |
 | `tools/accept.py` | Runs installed runtime probes and writes acceptance output outside the immutable composition. |
 | `tools/runtime_metadata.py` | Generates the runtime metadata documents from the manifest, lock, and accepted evidence. |
 | `tools/validate_metadata.py` | Validates the committed composition, metadata, and evidence documents in CI and on release tags. |
 | `tools/jsonschema_lite.py` | Dependency-free JSON Schema subset used by the repository tools. |
 | `tools/sdk_env.py` | Layers a composed prefix's search paths onto the host environment so native code can be built and tested against it. |
-| `sdk/core` | The OpenUSD-free SDK lane: diagnostic codes, `Result<T>`, and `runtime_info`. |
-| `sdk/usd` | The OpenUSD SDK lane: `open`. |
+| `sdk/core` | The OpenUSD-free SDK lane: diagnostic codes, `Result<T>`, `runtime_info`, and the rule that decides what a runtime supports. |
+| `sdk/usd` | The OpenUSD SDK lane: `open` and `formats`. |
 | `fixtures/three-points.copc` | Supplies a small deterministic COPC integration input. |
+| `fixtures/malformed.usda` | Supplies an asset of a composed format that OpenUSD refuses, which is the only way to reach `stage_open_failed`. |
 | `tests/native-consumer` | Verifies that a separate CMake consumer can find and link the composed `usdAssetIo` package and the installed SDK. |
 | `tests/tooling` | Tests the metadata generator, schemas, validator, and acceptance-report shape. |
 | `evidence/v0.1.0-windows.json` | Preserves the concise accepted-release result and immutable runtime identities. |
@@ -105,20 +106,33 @@ place of a null pointer plus loose diagnostic text. Its codes are published in
 on the code, never on the message.
 
 It is built in two lanes. The core lane compiles with no OpenUSD present and
-carries the diagnostics, the result type, and `runtime_info`; the OpenUSD lane
-carries `open`. `runtime_info` reads the materialized prefix's own
+carries the diagnostics, the result type, `runtime_info`, and `format_support`;
+the OpenUSD lane carries `open` and `formats`. `runtime_info` reads the
+materialized prefix's own
 `metadata/composition.lock.json`, so it describes the runtime that is present
 rather than the one a build was configured against, and it can report a missing
 or wrong runtime before any OpenUSD library is loaded. Its serialized form is
 `schemas/runtime-info.v1.json`, the introspection subset of the released runtime
 metadata, sharing its field names so the two can be compared field by field.
 
+`formats` answers what the runtime can read, and it is the one operation whose
+two sources disagree in a way that matters. The composition resolved a set of
+`usd-fileformat:` capabilities; OpenUSD registered the formats whose plugins
+loaded. Reporting either list alone, or their intersection, would erase the two
+cases worth acting on, so every extension is reported with the state that says
+which source claimed it: `available`, `not_loaded` for a composed plugin that
+did not register, and `undeclared` for a registered format no capability
+declared, which is how OpenUSD's own formats appear. The join is
+`format_support` in the core lane, so the rule is tested per commit against a
+fixture lock and a fixed registered list; only the registered list itself needs
+a loaded runtime. Its serialized form is `schemas/formats.v1.json`.
+
 The contract is held from both sides: `sdk/core/tests/test_core.cpp` asserts
-that the SDK produces exactly the committed document in
-`sdk/core/tests/data/runtime-info.json`, and `tests/tooling` asserts that the
-same document satisfies the schema, agrees with the lock it was read from, and
-lists the same diagnostic codes the SDK source defines. Neither side can move
-alone.
+that the SDK produces exactly the committed documents in
+`sdk/core/tests/data/runtime-info.json` and `sdk/core/tests/data/formats.json`,
+and `tests/tooling` asserts that the same documents satisfy their schemas, agree
+with the lock they were read from, and list the same diagnostic codes the SDK
+source defines. Neither side can move alone.
 
 Consuming the SDK natively needs the host CPython on the library search path,
 because the composed OpenUSD links `python313.dll` and this composition does not

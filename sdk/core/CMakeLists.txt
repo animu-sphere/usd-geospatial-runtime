@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.23)
 
 # The OpenUSD-free half of the SDK: the failure vocabulary, the result type,
-# and introspection over a materialized prefix. It links nothing, so a consumer
-# can report which runtime it found -- or why it found none -- before any
-# OpenUSD library is loaded.
+# introspection over a materialized prefix, and the rule that decides what a
+# runtime supports. It links nothing, so a consumer can report which runtime it
+# found -- or why it found none -- before any OpenUSD library is loaded, and CI
+# can check those contracts on a runner with no composed runtime.
 add_library(usdGeospatialCore STATIC
     src/diagnostics.cpp
+    src/format_support.cpp
     src/json.cpp
     src/runtime_info.cpp)
 add_library(usdgeospatial::core ALIAS usdGeospatialCore)

@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// usdGeospatial open() tests.
+// usdGeospatial open() and formats() tests.
 //
 // These need a loaded runtime, so they run inside a composed prefix -- see
 // sdk/README.md. Like the core tests they use no framework: a failed check
 // aborts, which is what CTest reads.
 //
-// argv[1] is the composed runtime prefix and argv[2] is a readable point-cloud
-// fixture; CMake passes both.
+// argv[1] is the composed runtime prefix, argv[2] is a readable point-cloud
+// fixture, and argv[3] is a deliberately malformed asset of a composed format;
+// CMake passes all three.
 
+#include <usd_geospatial/formats.h>
 #include <usd_geospatial/open.h>
 #include <usd_geospatial/runtime_info.h>
 
 #include <pxr/usd/usd/prim.h>
 
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -86,6 +90,22 @@ void test_reports_a_missing_asset() {
     report("missing asset", result.error());
 }
 
+/// The last condition open() separates: the asset resolved, its file format is
+/// present, and OpenUSD still declined. Reaching it needs a malformed asset of
+/// a composed format, because every earlier check has to pass first.
+void test_reports_a_malformed_asset(const std::string& malformed) {
+    Result<pxr::UsdStageRefPtr> result = open(malformed);
+    CHECK(!result.ok());
+    CHECK(result.error().code() == DiagnosticCode::stage_open_failed);
+    CHECK(result.error().detail("extension") == "usda");
+    // The condition is the SDK's, but the explanation belongs to OpenUSD and is
+    // relayed rather than replaced -- and the subsystem says so, which is what
+    // tells a caller triaging a bug which layer to look at.
+    CHECK(result.error().subsystem() == Subsystem::openusd);
+    CHECK(!result.error().message().empty());
+    report("malformed asset", result.error());
+}
+
 void test_opens_a_composed_format(const std::string& fixture) {
     Result<pxr::UsdStageRefPtr> result = open(fixture);
     if (!result.ok()) {
@@ -121,22 +141,87 @@ void test_runtime_info_matches_the_prefix(const std::string& prefix) {
     std::printf("%s\n", info.to_json().c_str());
 }
 
+/// formats() joins what the composition resolved with what OpenUSD registered.
+/// In a healthy runtime the two agree on every composed format, and asserting
+/// that they do is what this test is for: a plugin that ships and does not load
+/// passes every other test in this file.
+void test_formats_report(const std::string& prefix) {
+    Result<RuntimeInfo> runtime = runtime_info(prefix);
+    if (!runtime.ok()) {
+        std::fprintf(stderr, "FAILED: %s\n", runtime.error().to_json().c_str());
+        std::abort();
+    }
+    const std::vector<Format> supported = formats(runtime.value());
+    CHECK(!supported.empty());
+
+    std::size_t declared = 0;
+    for (const Capability& capability : runtime.value().capabilities()) {
+        if (!format_extension(capability.name).empty()) {
+            ++declared;
+        }
+    }
+    CHECK(declared > 0);
+
+    std::size_t composed = 0;
+    bool copc = false;
+    bool own = false;
+    for (const Format& format : supported) {
+        if (format.composed()) {
+            ++composed;
+            CHECK(format.capability == format_capability(format.extension));
+            CHECK(!format.component.empty());
+            // Every format this composition resolved must also have loaded.
+            // The capability name is the failure message, because it is what
+            // names the plugin to look at.
+            Check(format.state == FormatState::available, format.capability.c_str());
+            copc = copc || format.extension == "copc";
+        } else {
+            // OpenUSD's own formats were registered and never declared. They
+            // are reported rather than hidden: a caller asking what it can open
+            // needs to know they work.
+            CHECK(format.component.empty());
+            own = own || format.extension == "usda";
+        }
+    }
+    CHECK(composed == declared);
+    CHECK(copc);
+    CHECK(own);
+
+    // The no-argument overload answers for the runtime the environment names.
+    // Whether one is named is a property of how this test was launched, so what
+    // is asserted is that it never invents an empty report: it either answers
+    // or fails with a runtime condition.
+    Result<std::vector<Format>> ambient = formats();
+    if (ambient) {
+        CHECK(!ambient.value().empty());
+    } else {
+        CHECK(ambient.error().category() == Category::runtime);
+    }
+
+    std::printf("%s\n", formats_to_json(supported).c_str());
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 3) {
-        std::fprintf(stderr, "usage: %s <runtime prefix> <point cloud fixture>\n", argv[0]);
+    if (argc < 4) {
+        std::fprintf(stderr,
+                     "usage: %s <runtime prefix> <point cloud fixture> <malformed asset>\n",
+                     argv[0]);
         return 2;
     }
     const std::string prefix = argv[1];
     const std::string fixture = argv[2];
+    const std::string malformed = argv[3];
 
     test_rejects_unusable_arguments();
     test_reports_an_unhandled_scheme();
     test_reports_a_missing_capability();
     test_reports_a_missing_asset();
+    test_reports_a_malformed_asset(malformed);
     test_opens_a_composed_format(fixture);
     test_runtime_info_matches_the_prefix(prefix);
+    test_formats_report(prefix);
 
     std::printf("usdGeospatial: %d checks passed\n", g_checks);
     return 0;

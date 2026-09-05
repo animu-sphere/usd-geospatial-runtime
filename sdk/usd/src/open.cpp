@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <usd_geospatial/open.h>
 
+#include <usd_geospatial/format_support.h>
+
 #include <pxr/base/tf/errorMark.h>
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/sdf/fileFormat.h>
@@ -130,7 +132,9 @@ Result<pxr::UsdStageRefPtr> open(const std::string& uri) {
                               "this composition installs no file format for the extension");
         diagnostic.with("uri", uri)
             .with("extension", extension)
-            .with("capability", "usd-fileformat:" + extension);
+            // The capability name is built by the core lane, so the name a
+            // failure reports and the name `formats` reports cannot drift.
+            .with("capability", format_capability(extension));
         return Result<pxr::UsdStageRefPtr>::failure(attach(diagnostic, take_errors(mark)));
     }
 

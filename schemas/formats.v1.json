@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/animu-sphere/usd-geospatial-runtime/schemas/formats.v1.json",
+  "title": "Formats",
+  "description": "Every file extension a runtime knows about, and which of the two sources claimed it. Produced by usd_geospatial::formats_to_json. The composition declares capabilities and OpenUSD registers file formats; those answers differ exactly when a plugin fails to load, so each extension carries a state rather than the two lists being merged into one.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "formats"],
+  "properties": {
+    "schema": {"const": "usd-geospatial-runtime.formats/v1"},
+    "formats": {
+      "type": "array",
+      "description": "Sorted by extension, so two reports of one runtime compare as text.",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "A format the composition declares. The provider fields name the component a caller reports when the format is present but did not load.",
+            "additionalProperties": false,
+            "required": ["extension", "state", "capability", "component", "version", "artifact"],
+            "properties": {
+              "extension": {"$ref": "#/$defs/extension"},
+              "state": {"enum": ["available", "not_loaded"]},
+              "capability": {"type": "string", "pattern": "^usd-fileformat:[a-z0-9][a-z0-9._+-]*$"},
+              "component": {"type": "string", "minLength": 1},
+              "version": {"type": "string", "minLength": 1},
+              "artifact": {"$ref": "#/$defs/digest"}
+            }
+          },
+          {
+            "type": "object",
+            "description": "A format OpenUSD registered that no capability declares, such as OpenUSD's own usda, usdc, and usdz. There is no provider to name: the composition never asked for it.",
+            "additionalProperties": false,
+            "required": ["extension", "state"],
+            "properties": {
+              "extension": {"$ref": "#/$defs/extension"},
+              "state": {"const": "undeclared"}
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "extension": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._+-]*$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

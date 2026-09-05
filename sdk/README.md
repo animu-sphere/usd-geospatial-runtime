@@ -7,15 +7,15 @@ and machine-readable introspection, so a consumer — including a future Python
 or JavaScript binding — can act on causes instead of parsing text.
 
 The intended surface is described in the [SDK design](../docs/design/sdk.md).
-`open` and `runtime_info` are implemented; `inspect` and `formats` are not, and
-join the API when their contracts are proven by tests.
+`open`, `runtime_info`, and `formats` are implemented; `inspect` is not, and
+joins the API when its contract is proven by tests.
 
 ## Two lanes
 
 | Lane | Target | Needs OpenUSD | Provides |
 | --- | --- | --- | --- |
-| core | `usdgeospatial::core` | no | `Result<T>`, `Diagnostic`, `runtime_info` |
-| usd | `usdgeospatial::sdk` | yes | `open` |
+| core | `usdgeospatial::core` | no | `Result<T>`, `Diagnostic`, `runtime_info`, `format_support` |
+| usd | `usdgeospatial::sdk` | yes | `open`, `formats` |
 
 The split is not cosmetic. Describing a runtime must not require loading it: an
 application that finds no runtime, or the wrong one, has to be able to say so,
@@ -24,9 +24,16 @@ and `runtime_info` therefore reads the prefix's own
 lets CI check the diagnostics, result, and introspection contracts on a runner
 with no composed runtime.
 
+`formats` is split along the same line rather than by convenience. Only a
+loaded OpenUSD can say which file formats registered, so `formats` itself is in
+the USD lane; the rule that turns the composed list and the registered list
+into one report is `format_support` in the core lane, where it is tested
+against a fixture lock and a fixed registered list per commit.
+
 ## Operations
 
 ```cpp
+#include <usd_geospatial/formats.h>
 #include <usd_geospatial/open.h>
 #include <usd_geospatial/runtime_info.h>
 
@@ -46,6 +53,32 @@ resolved components, and the capability-to-provider mapping.
 introspection subset of the released
 [runtime metadata](../schemas/runtime-metadata.v1.json), using the same field
 names so a loaded runtime can be compared with a released one field by field.
+
+`formats` answers what this runtime can read. Two lists answer that and they
+are not the same question: the composition resolved a set of
+`usd-fileformat:` capabilities, and OpenUSD registered the file formats whose
+plugins actually loaded. Each extension is therefore reported with the state
+that says which of the two claimed it:
+
+```cpp
+for (const auto& format : usd_geospatial::formats(runtime.value())) {
+    switch (format.state) {
+        case usd_geospatial::FormatState::available:   // composed and loaded
+        case usd_geospatial::FormatState::not_loaded:  // composed, did not load
+        case usd_geospatial::FormatState::undeclared:  // loaded, never composed
+            break;
+    }
+}
+```
+
+`not_loaded` is the one worth wiring into a diagnostic: it is a plugin this
+composition installed and OpenUSD did not register, and `format.component`
+names what to look at. `undeclared` is ordinary — it is how OpenUSD's own
+`usda`, `usdc`, and `usdz` appear, since no capability declares them.
+Reporting only the composed list, only the registered list, or their
+intersection would erase exactly that distinction, so none of the three is what
+this returns. `formats_to_json` serializes a report as
+[`schemas/formats.v1.json`](../schemas/formats.v1.json).
 
 Failures carry a stable code, a category, the subsystem that observed them, and
 structured details. The codes are listed in
@@ -117,9 +150,9 @@ python tools/sdk_env.py --composition .local/composed -- `
 ```text
 sdk/core/include/usd_geospatial/   public headers, no OpenUSD
 sdk/core/src/                      implementation, including a private JSON reader
-sdk/core/tests/data/               a synthetic composition lock and the document it produces
-sdk/usd/include/usd_geospatial/    public headers that expose OpenUSD types
-sdk/usd/src/                       open()
+sdk/core/tests/data/               a synthetic composition lock and the documents it produces
+sdk/usd/include/usd_geospatial/    public headers of the operations that need OpenUSD
+sdk/usd/src/                       open() and formats()
 sdk/cmake/                         package config templates
 ```
 

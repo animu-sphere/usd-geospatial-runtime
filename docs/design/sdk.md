@@ -2,11 +2,10 @@
 
 Status: proposed
 
-`open` and `runtime_info` are implemented for C++; see the
+`open`, `runtime_info`, and `formats` are implemented for C++; see the
 [architecture overview](../architecture/overview.md) for what that covers and
 [sdk/README.md](../../sdk/README.md) for how to build it. Everything else on
-this page -- `inspect`, `formats`, and every binding -- is intent, not
-implementation.
+this page -- `inspect` and every binding -- is intent, not implementation.
 
 ## Initial C++ surface
 
@@ -48,10 +47,23 @@ shapes so scripts and AI tools do not need to scrape display text.
 `runtime_info()` does this today, against `schemas/runtime-info.v1.json`. It
 reads the materialized prefix rather than asking OpenUSD, so it can describe a
 runtime -- or report that there is none -- before any OpenUSD library loads.
-`formats()` does not exist yet: it must first be decided whether it reports the
-capabilities the composition resolved, the extensions OpenUSD actually
-registered, or the intersection, because those differ exactly when a plugin
-fails to load, which is when the answer matters most.
+
+`formats()` does this against `schemas/formats.v1.json`, and it reports none of
+the three candidate answers. The capabilities the composition resolved and the
+extensions OpenUSD registered differ exactly when a plugin fails to load, which
+is when the answer matters most, so choosing either list would report a
+composition that is broken as if it were fine or as if the format had never
+been asked for, and reporting their intersection would hide the failure
+entirely. Every extension is therefore reported with the state that says which
+source claimed it -- `available`, `not_loaded`, `undeclared` -- and a caller
+that only wants what it can open filters on `available` in one predicate. The
+rule is a pure function of the two lists, so it lives in the OpenUSD-free lane
+and is tested without a runtime; only obtaining the registered list needs a
+loaded OpenUSD.
+
+`inspect()` remains undefined. It needs a stated result -- what it reports for
+an asset that opens, and what it reports for one that does not -- before it has
+a shape, and it should not be added until a test can prove that contract.
 
 ## Python
 

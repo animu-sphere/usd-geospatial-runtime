@@ -62,30 +62,34 @@ changing historical release claims.
 
 ## P2: Establish the small C++ SDK
 
-Its first slice is in place. `Result<T>`, the published diagnostic codes, and
-the `runtime_info` schema are defined; `open` and `runtime_info` are
-implemented in two lanes under `sdk/`; and `tests/native-consumer` builds
-against the installed public headers through the exported CMake package. The
-implemented behavior is described in the
+Most of it is in place. `Result<T>`, the published diagnostic codes, the
+`runtime_info` and `formats` schemas, and the `open`, `runtime_info`, and
+`formats` operations are implemented in two lanes under `sdk/`, and
+`tests/native-consumer` builds against the installed public headers through the
+exported CMake package. The implemented behavior is described in the
 [architecture overview](../architecture/overview.md) and the codes in the
 [diagnostics reference](../reference/diagnostics.md).
 
-- Add `formats` and `inspect`. Neither has a proven contract yet: `formats`
-  needs a decision on whether it reports composed capabilities, OpenUSD's
-  registered extensions, or the intersection, and the two differ whenever a
-  plugin fails to load. `inspect` needs a defined result before it has a shape.
+`formats` settled the open question by refusing the choice: it reports neither
+the composed capabilities, nor OpenUSD's registered extensions, nor their
+intersection, but every extension with the state that says which source claimed
+it. The two lists differ exactly when a plugin fails to load, so collapsing
+them would erase the case the operation exists for. The join is a pure function
+in the OpenUSD-free lane and is tested per commit; only the registered list
+needs a loaded runtime.
+
+- Add `inspect`. It still has no proven contract: it needs a defined result --
+  what it reports for an asset that opens, and what it reports for one that
+  does not -- before it has a shape.
 - Run the OpenUSD lane in CI. The core lane already builds and tests per
   commit; the OpenUSD lane needs a composed prefix and a toolchain matching the
   target, so it belongs with acceptance rather than with the per-commit checks
-  and has no runner yet.
+  and has no runner yet. Its tests now cover `formats` and every `open` failure
+  path, so nothing about them is proven until that runner exists.
 - Decide how the SDK is delivered. It is currently built from source against a
   prefix. Publishing it as an OpenStrata component would let a consumer acquire
   it the way every other component is acquired, and would let `runtime_info`
   discover its own prefix rather than being told one.
-- Cover the failure paths the current tests cannot reach: `stage_open_failed`
-  needs a malformed asset of a composed format, and
-  `runtime_metadata_unreadable` needs an unreadable file rather than a
-  malformed string.
 
 Completion means a native consumer can open a supported asset, inspect runtime
 identity, and handle failures without parsing message text.
