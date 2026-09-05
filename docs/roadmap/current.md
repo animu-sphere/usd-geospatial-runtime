@@ -74,10 +74,10 @@ implemented behavior is described in the
   needs a decision on whether it reports composed capabilities, OpenUSD's
   registered extensions, or the intersection, and the two differ whenever a
   plugin fails to load. `inspect` needs a defined result before it has a shape.
-- Run the SDK lanes in CI. The core lane needs no OpenUSD, so it can build and
-  test on the existing runner; the OpenUSD lane needs a composed prefix and a
-  matching toolchain, and belongs with acceptance rather than with the
-  per-commit checks.
+- Run the OpenUSD lane in CI. The core lane already builds and tests per
+  commit; the OpenUSD lane needs a composed prefix and a toolchain matching the
+  target, so it belongs with acceptance rather than with the per-commit checks
+  and has no runner yet.
 - Decide how the SDK is delivered. It is currently built from source against a
   prefix. Publishing it as an OpenStrata component would let a consumer acquire
   it the way every other component is acquired, and would let `runtime_info`

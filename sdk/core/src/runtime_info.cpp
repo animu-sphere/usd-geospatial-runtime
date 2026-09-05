@@ -41,6 +41,40 @@ Diagnostic invalid(std::string message) {
                       std::move(message));
 }
 
+/// Whether a value is a `sha256:` digest, in the one spelling
+/// `schemas/runtime-info.v1.json` accepts.
+bool is_digest(const std::string& value) {
+    static const std::string prefix = "sha256:";
+    if (value.size() != prefix.size() + 64 || value.compare(0, prefix.size(), prefix) != 0) {
+        return false;
+    }
+    for (std::size_t at = prefix.size(); at < value.size(); ++at) {
+        const char c = value[at];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/// Which members of a composition lock are worth building.
+///
+/// A lock is mostly file inventory: of the 6.2 MB one this repository commits,
+/// about 5 MB is `inventory`, `sdk`, `artifacts`, and `manifest`, none of which
+/// this SDK reads, and another 1.1 MB is the install list, of which it reads
+/// only the destination of each entry. `runtime_info` is documented as the
+/// cheap probe a caller runs before OpenUSD loads, so the rest is scanned for
+/// well-formedness and discarded instead of becoming a hundred thousand nodes.
+bool keep_runtime_members(const std::vector<std::string>& path, const std::string& name) {
+    if (path.empty()) {
+        return name == "schema" || name == "resolved" || name == "runtime_digest";
+    }
+    if (path.size() == 2 && path[0] == "resolved" && path[1] == "install") {
+        return name == "destination";
+    }
+    return true;
+}
+
 /// Decompose the canonical target string, which is the target's identity:
 /// `<os>-<arch>-<toolchain>-py<host python>`. This is the same shape
 /// `tools/runtime_metadata.py` enforces for the committed metadata document,
@@ -80,6 +114,13 @@ bool decompose_target(const std::string& id, Target& target, std::string& error)
     if (!lower_alnum(parts[0], false) || !lower_alnum(parts[1], true) ||
         !lower_alnum(parts[2], false)) {
         error = "target '" + id + "' contains a field that is not lowercase alphanumeric";
+        return false;
+    }
+    // schemas/runtime-info.v1.json spells the toolchain `^[a-z][a-z0-9]*$`, so
+    // a leading digit is refused here rather than serialized into a document
+    // that then fails its own schema.
+    if (parts[2][0] < 'a' || parts[2][0] > 'z') {
+        error = "target '" + id + "' has a toolchain that does not start with a letter";
         return false;
     }
     if (parts[0] != "windows" && parts[0] != "linux" && parts[0] != "macos") {
@@ -165,7 +206,7 @@ const Capability* RuntimeInfo::capability(const std::string& name) const {
 Result<RuntimeInfo> RuntimeInfo::from_lock_json(const std::string& text, std::string prefix) {
     json::Value document;
     std::string error;
-    if (!json::parse(text, document, error)) {
+    if (!json::parse(text, document, error, keep_runtime_members)) {
         return fail<RuntimeInfo>(DiagnosticCode::runtime_metadata_unreadable,
                                  Subsystem::openstrata,
                                  "the composition lock is not valid JSON: " + error);
@@ -200,11 +241,19 @@ Result<RuntimeInfo> RuntimeInfo::from_lock_json(const std::string& text, std::st
         return Result<RuntimeInfo>::failure(invalid(target_error));
     }
 
+    // Every field below is checked, not just read. `to_json` promises a
+    // document that conforms to schemas/runtime-info.v1.json, and the only way
+    // to keep that promise is to refuse a lock that cannot produce one: an
+    // absent digest would otherwise be serialized as "" and fail the schema at
+    // whoever consumed the output rather than here, where the cause is known.
     info._identity.manifest_digest = resolved->member_text("manifest_digest");
     info._identity.composition_digest = resolved->member_text("composition_digest");
     info._identity.runtime_digest = document.member_text("runtime_digest");
-    if (info._identity.runtime_digest.empty()) {
-        return Result<RuntimeInfo>::failure(invalid("the composition lock records no runtime digest"));
+    if (!is_digest(info._identity.manifest_digest) ||
+        !is_digest(info._identity.composition_digest) ||
+        !is_digest(info._identity.runtime_digest)) {
+        return Result<RuntimeInfo>::failure(
+            invalid("the composition lock does not record all three identities as sha256 digests"));
     }
 
     const json::Value* components = resolved->find("components");
@@ -217,9 +266,18 @@ Result<RuntimeInfo> RuntimeInfo::from_lock_json(const std::string& text, std::st
         component.kind = entry.member_text("kind");
         component.version = entry.member_text("version");
         component.artifact = entry.member_text("digest");
-        if (component.id.empty() || component.artifact.empty()) {
+        if (component.id.empty() || component.version.empty()) {
             return Result<RuntimeInfo>::failure(
-                invalid("a resolved component has no id or no artifact digest"));
+                invalid("a resolved component has no id or no version"));
+        }
+        if (component.kind != "runtime" && component.kind != "library" &&
+            component.kind != "plugin") {
+            return Result<RuntimeInfo>::failure(
+                invalid("resolved component '" + component.id + "' has an unknown kind"));
+        }
+        if (!is_digest(component.artifact)) {
+            return Result<RuntimeInfo>::failure(
+                invalid("resolved component '" + component.id + "' has no artifact digest"));
         }
         info._components.push_back(std::move(component));
     }
@@ -234,9 +292,14 @@ Result<RuntimeInfo> RuntimeInfo::from_lock_json(const std::string& text, std::st
         capability.component = entry.member_text("component");
         capability.version = entry.member_text("version");
         capability.artifact = entry.member_text("digest");
-        if (capability.name.empty() || capability.component.empty()) {
+        if (capability.name.empty() || capability.component.empty() ||
+            capability.version.empty()) {
             return Result<RuntimeInfo>::failure(
-                invalid("a resolved capability has no name or no provider"));
+                invalid("a resolved capability has no name, no provider, or no version"));
+        }
+        if (!is_digest(capability.artifact)) {
+            return Result<RuntimeInfo>::failure(
+                invalid("capability '" + capability.name + "' has no artifact digest"));
         }
         info._capabilities.push_back(std::move(capability));
     }

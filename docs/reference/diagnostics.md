@@ -53,7 +53,10 @@ be found by the SDK's own checks or relayed from OpenUSD.
 
 `details` carries the machine-readable specifics that would otherwise exist only
 inside the message. The keys are per-code and additive; a caller reads the ones
-it knows and ignores the rest. The `capability` detail on `UGEO-E031` uses the
+it knows and ignores the rest. One key is not per-code: `openusd` appears on any
+diagnostic the SDK decided for itself while OpenUSD had also posted something,
+and carries that text. It is what explains a `UGEO-E031` caused by a plugin that
+failed to load rather than by a format that was never composed. The `capability` detail on `UGEO-E031` uses the
 same capability name the composition manifest and
 [runtime metadata](../../schemas/runtime-metadata.v1.json) use, so a consumer
 can report exactly which capability a composition would have to add.

@@ -48,13 +48,16 @@ std::string join_schemes(const std::vector<std::string>& schemes) {
     return joined;
 }
 
-/// The text OpenUSD posted while an operation ran, as one message.
+/// Take the text OpenUSD posted since the mark, as one message, and clear it.
 ///
 /// A stage that fails to open usually posts several errors, and only the set of
 /// them explains the failure. They are relayed as message text and never
-/// parsed: `stage_open_failed` is the contract, this is the detail a human
-/// needs.
-std::string collect_errors(const pxr::TfErrorMark& mark) {
+/// parsed: the code is the contract, this is the detail a human needs.
+///
+/// Clearing is not optional. `open` returns a `Result`, so anything left on the
+/// error list would surface later as OpenUSD noise on stderr or, worse, would
+/// trip an outer `TfErrorMark` in caller code that had nothing to do with it.
+std::string take_errors(pxr::TfErrorMark& mark) {
     std::string text;
     for (auto it = mark.GetBegin(); it != mark.GetEnd(); ++it) {
         if (!text.empty()) {
@@ -62,7 +65,21 @@ std::string collect_errors(const pxr::TfErrorMark& mark) {
         }
         text += it->GetCommentary();
     }
+    mark.Clear();
     return text;
+}
+
+/// Attach relayed OpenUSD text to a diagnostic the SDK decided on itself.
+///
+/// The condition stays the SDK's -- a missing file format is
+/// `capability_unavailable` whether or not OpenUSD had something to say -- but
+/// when a plugin failed to load, what it said is the only thing that explains
+/// why the format is missing, so it is carried rather than discarded.
+Diagnostic& attach(Diagnostic& diagnostic, const std::string& relayed) {
+    if (!relayed.empty()) {
+        diagnostic.with("openusd", relayed);
+    }
+    return diagnostic;
 }
 
 }  // namespace
@@ -72,6 +89,13 @@ Result<pxr::UsdStageRefPtr> open(const std::string& uri) {
         return fail<pxr::UsdStageRefPtr>(DiagnosticCode::invalid_argument, Subsystem::sdk,
                                          "an asset was requested with an empty URI");
     }
+
+    // The mark is taken before the first call into OpenUSD, not before the
+    // last. Resolver and plugin registration happen inside the calls below and
+    // post their own errors; a mark that starts later neither reports them nor
+    // clears them, which is exactly the case -- a plugin that failed to load --
+    // where the caller most needs to be told.
+    pxr::TfErrorMark mark;
 
     const std::string scheme = uri_scheme(uri);
     if (!scheme.empty()) {
@@ -84,53 +108,49 @@ Result<pxr::UsdStageRefPtr> open(const std::string& uri) {
             }
         }
         if (!known) {
-            return Result<pxr::UsdStageRefPtr>::failure(
-                Diagnostic(DiagnosticCode::unsupported_uri_scheme, Subsystem::sdk,
-                           "no resolver in this composition handles the URI scheme")
-                    .with("uri", uri)
-                    .with("scheme", scheme)
-                    .with("registered", join_schemes(registered)));
+            Diagnostic diagnostic(DiagnosticCode::unsupported_uri_scheme, Subsystem::sdk,
+                                  "no resolver in this composition handles the URI scheme");
+            diagnostic.with("uri", uri)
+                .with("scheme", scheme)
+                .with("registered", join_schemes(registered));
+            return Result<pxr::UsdStageRefPtr>::failure(attach(diagnostic, take_errors(mark)));
         }
     }
 
     pxr::ArResolver& resolver = pxr::ArGetResolver();
     const std::string extension = resolver.GetExtension(uri);
     if (extension.empty()) {
-        return Result<pxr::UsdStageRefPtr>::failure(
-            Diagnostic(DiagnosticCode::invalid_argument, Subsystem::sdk,
-                       "the URI carries no extension, so no file format can be selected")
-                .with("uri", uri));
+        Diagnostic diagnostic(DiagnosticCode::invalid_argument, Subsystem::sdk,
+                              "the URI carries no extension, so no file format can be selected");
+        diagnostic.with("uri", uri);
+        return Result<pxr::UsdStageRefPtr>::failure(attach(diagnostic, take_errors(mark)));
     }
     if (!pxr::SdfFileFormat::FindByExtension(extension)) {
-        return Result<pxr::UsdStageRefPtr>::failure(
-            Diagnostic(DiagnosticCode::capability_unavailable, Subsystem::sdk,
-                       "this composition installs no file format for the extension")
-                .with("uri", uri)
-                .with("extension", extension)
-                .with("capability", "usd-fileformat:" + extension));
+        Diagnostic diagnostic(DiagnosticCode::capability_unavailable, Subsystem::sdk,
+                              "this composition installs no file format for the extension");
+        diagnostic.with("uri", uri)
+            .with("extension", extension)
+            .with("capability", "usd-fileformat:" + extension);
+        return Result<pxr::UsdStageRefPtr>::failure(attach(diagnostic, take_errors(mark)));
     }
 
-    pxr::TfErrorMark mark;
     const pxr::ArResolvedPath resolved = resolver.Resolve(uri);
     if (!resolved) {
-        Diagnostic diagnostic(DiagnosticCode::asset_not_found, Subsystem::openusd,
-                              collect_errors(mark));
-        mark.Clear();
-        if (diagnostic.message().empty()) {
-            diagnostic = Diagnostic(DiagnosticCode::asset_not_found, Subsystem::sdk,
-                                    "the resolver did not resolve the URI to an asset");
-        }
+        const std::string relayed = take_errors(mark);
+        Diagnostic diagnostic(
+            DiagnosticCode::asset_not_found,
+            relayed.empty() ? Subsystem::sdk : Subsystem::openusd,
+            relayed.empty() ? "the resolver did not resolve the URI to an asset" : relayed);
         return Result<pxr::UsdStageRefPtr>::failure(diagnostic.with("uri", uri));
     }
 
     const pxr::UsdStageRefPtr stage = pxr::UsdStage::Open(uri);
     if (!stage) {
-        const std::string text = collect_errors(mark);
-        mark.Clear();
+        const std::string relayed = take_errors(mark);
         return Result<pxr::UsdStageRefPtr>::failure(
             Diagnostic(DiagnosticCode::stage_open_failed,
-                       text.empty() ? Subsystem::sdk : Subsystem::openusd,
-                       text.empty() ? "OpenUSD returned no stage and posted no error" : text)
+                       relayed.empty() ? Subsystem::sdk : Subsystem::openusd,
+                       relayed.empty() ? "OpenUSD returned no stage and posted no error" : relayed)
                 .with("uri", uri)
                 .with("extension", extension));
     }

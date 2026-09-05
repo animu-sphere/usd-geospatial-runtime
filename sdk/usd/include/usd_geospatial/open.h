@@ -34,6 +34,16 @@ namespace usd_geospatial {
 ///   OpenUSD declined to compose a stage. The relayed OpenUSD text is in the
 ///   message and the subsystem is `openusd`.
 ///
+/// The first three are the SDK's own decisions, and each carries an `openusd`
+/// detail when OpenUSD had also posted something while the call ran -- for a
+/// missing capability that text is usually the reason a plugin failed to load,
+/// which is the difference between a format that was never composed and one
+/// that was composed and did not load. The last two relay that text as the
+/// message instead, because there it is the whole explanation.
+///
+/// OpenUSD's error list is cleared on every path, so a caller's own
+/// `TfErrorMark` never sees this call's diagnostics.
+///
 /// The formats this accepts are whatever the composition provides; the SDK
 /// hardcodes no format list. `runtime_info().capabilities()` is the
 /// machine-readable answer to what is available without opening anything.

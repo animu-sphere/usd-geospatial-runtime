@@ -67,8 +67,13 @@ def main(argv=None):
     prefix = args.composition.resolve()
     env = environment(prefix)
     if args.print:
-        lock = json.loads((prefix / "metadata/composition.lock.json").read_text(encoding="utf-8"))
-        for key in sorted({entry["key"] for entry in lock["sdk"]["environment"][platform_name()]}):
+        # Print every variable this runner would set, which is the search paths
+        # plus the composition's own settings. Printing only the paths would
+        # describe an environment the runner does not actually build.
+        sdk = json.loads((prefix / "metadata/composition.lock.json").read_text(encoding="utf-8"))["sdk"]
+        keys = {entry["key"] for entry in sdk["environment"][platform_name()]}
+        keys.update(sdk.get("settings", {}))
+        for key in sorted(keys):
             print(f"{key}={env[key]}")
         return 0
 

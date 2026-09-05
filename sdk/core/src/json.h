@@ -66,9 +66,22 @@ private:
     std::vector<std::pair<std::string, Value>> _members;
 };
 
+/// Decides whether an object member is retained while parsing.
+///
+/// `path` names the members enclosing this one, outermost first; array elements
+/// contribute no name, so a member of an element of `resolved.install` is
+/// offered with the path `{"resolved", "install"}`. Returning false skips the
+/// value: it is still scanned for well-formedness, but no `Value` is built for
+/// it and it cannot be read back.
+using MemberFilter = bool (*)(const std::vector<std::string>& path, const std::string& name);
+
 /// Parse a complete JSON document. On failure returns false and sets `error`
 /// to a message naming the byte offset; `out` is left unspecified.
-bool parse(const std::string& text, Value& out, std::string& error);
+///
+/// A composition lock is mostly file inventory that no caller of this parser
+/// reads, so `keep` exists to avoid materializing it. Passing nullptr retains
+/// the whole document.
+bool parse(const std::string& text, Value& out, std::string& error, MemberFilter keep = nullptr);
 
 /// Build JSON text in the same shape Python's `json.dumps(indent=2)` writes,
 /// so a document this SDK emits and one the repository tools emit compare as

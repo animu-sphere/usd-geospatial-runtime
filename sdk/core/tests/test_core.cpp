@@ -12,6 +12,8 @@
 #include <usd_geospatial/result.h>
 #include <usd_geospatial/runtime_info.h>
 
+#include "json.h"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -157,6 +159,58 @@ void test_result() {
     CHECK(threw);
 }
 
+bool drop_named_member(const std::vector<std::string>& path, const std::string& name) {
+    (void)path;
+    return name != "drop";
+}
+
+bool keep_only_wanted_in_list(const std::vector<std::string>& path, const std::string& name) {
+    if (path.size() == 2 && path[0] == "outer" && path[1] == "list") {
+        return name == "wanted";
+    }
+    return true;
+}
+
+void test_json_reader() {
+    json::Value document;
+    std::string error;
+
+    // A number is scanned by the JSON grammar, not by "advance over anything
+    // numeric-looking", so a malformed one is rejected rather than kept.
+    CHECK(!json::parse("{\"a\": 1-2e+3}", document, error));
+    CHECK(!json::parse("{\"a\": 01}", document, error));
+    CHECK(!json::parse("{\"a\": 1.}", document, error));
+    CHECK(!json::parse("{\"a\": .5}", document, error));
+    CHECK(json::parse("{\"a\": -1.5e-3}", document, error));
+    CHECK(document.find("a") != nullptr && document.find("a")->is_number());
+
+    // A dropped member is absent, and its siblings are unaffected. The dropped
+    // value contains an escaped quote, which a skipper that stopped at the
+    // first quote byte would misread as the end of the string.
+    CHECK(json::parse("{\"drop\": \"a\\\"b\", \"keep\": \"yes\"}", document, error,
+                      drop_named_member));
+    CHECK(document.find("drop") == nullptr);
+    CHECK(document.member_text("keep") == "yes");
+
+    // Skipping is not the same as not looking: a malformed value still fails
+    // the document, so a filter cannot hide a broken file.
+    CHECK(!json::parse("{\"drop\": [1, }, \"keep\": 1}", document, error, drop_named_member));
+    CHECK(!json::parse("{\"drop\": \"unterminated}", document, error, drop_named_member));
+
+    // The filter sees the enclosing member names, so it can keep one field of
+    // the elements of one array without touching identically named fields
+    // elsewhere. That is what lets runtime_info read only `destination` out of
+    // a composition lock's install list.
+    CHECK(json::parse("{\"outer\": {\"list\": [{\"wanted\": \"a\", \"bulk\": \"b\"}],"
+                      " \"other\": {\"bulk\": \"c\"}}}",
+                      document, error, keep_only_wanted_in_list));
+    const json::Value* list = document.find("outer")->find("list");
+    CHECK(list != nullptr && list->items().size() == 1);
+    CHECK(list->items()[0].member_text("wanted") == "a");
+    CHECK(list->items()[0].find("bulk") == nullptr);
+    CHECK(document.find("outer")->find("other")->member_text("bulk") == "c");
+}
+
 void test_runtime_info_document() {
     Result<RuntimeInfo> result =
         RuntimeInfo::from_lock_json(read("composition.lock.json"), "/example/prefix");
@@ -238,6 +292,37 @@ void test_runtime_info_rejects_bad_input() {
     Result<RuntimeInfo> missing_usd = RuntimeInfo::from_lock_json(no_usd, "/p");
     CHECK(!missing_usd.ok());
     CHECK(missing_usd.error().code() == DiagnosticCode::runtime_metadata_invalid);
+
+    // to_json promises a document that satisfies schemas/runtime-info.v1.json,
+    // so anything that could only serialize into an invalid one is refused
+    // here. Each case below would otherwise have become an empty string or an
+    // unknown enum value in the output.
+    struct Case {
+        const char* find;
+        const char* replace;
+        const char* what;
+    };
+    const Case rejected[] = {
+        {"\"runtime_digest\": \"sha256:5555555555555555555555555555555555555555555555555555555555555555\"",
+         "\"runtime_digest\": \"sha256:abc\"", "a runtime digest that is not a sha256 digest"},
+        {"\"manifest_digest\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\"",
+         "\"manifest_digest\": \"\"", "an empty manifest digest"},
+        {"\"kind\": \"library\"", "\"kind\": \"bundle\"", "a component of an unknown kind"},
+        {"\"version\": \"0.4.2\"", "\"version\": \"\"", "a component or capability with no version"},
+        {"\"digest\": \"sha256:6666666666666666666666666666666666666666666666666666666666666666\"",
+         "\"digest\": \"SHA256:6666666666666666666666666666666666666666666666666666666666666666\"",
+         "a digest in a spelling the schema does not accept"},
+        {"gcc13", "13gcc", "a toolchain that does not start with a letter"},
+    };
+    for (const Case& item : rejected) {
+        std::string mutated = good;
+        const std::size_t found = mutated.find(item.find);
+        Check(found != std::string::npos, item.what);
+        mutated.replace(found, std::string(item.find).size(), item.replace);
+        Result<RuntimeInfo> result = RuntimeInfo::from_lock_json(mutated, "/p");
+        Check(!result.ok() && result.error().code() == DiagnosticCode::runtime_metadata_invalid,
+              item.what);
+    }
 }
 
 void test_runtime_info_from_prefix() {
@@ -272,6 +357,7 @@ int main(int argc, char** argv) {
     test_diagnostic_codes();
     test_diagnostic_details();
     test_result();
+    test_json_reader();
     test_runtime_info_document();
     test_bundled_python_is_read_not_asserted();
     test_runtime_info_rejects_bad_input();

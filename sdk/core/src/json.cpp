@@ -4,8 +4,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
+#include <locale>
+#include <sstream>
 #include <string>
+#include <vector>
 
 namespace usd_geospatial {
 namespace json {
@@ -38,7 +40,8 @@ void append_utf8(std::string& out, std::uint32_t code_point) {
 
 class Parser {
 public:
-    Parser(const std::string& text, std::string& error) : _text(text), _error(error) {}
+    Parser(const std::string& text, std::string& error, MemberFilter keep)
+        : _text(text), _error(error), _keep(keep) {}
 
     bool run(Value& out) {
         skip_space();
@@ -167,22 +170,62 @@ private:
         return true;
     }
 
-    bool parse_number(Value& out) {
-        const std::size_t start = _at;
+    /// Scan a number per the JSON grammar: `-? (0 | [1-9][0-9]*) (. [0-9]+)?
+    /// ([eE] [+-]? [0-9]+)?`. The grammar is applied rather than "advance over
+    /// anything numeric-looking" so a malformed value such as `1-2e+3` is
+    /// rejected here instead of surviving as a number.
+    bool scan_number() {
+        const auto digits = [this]() {
+            const std::size_t start = _at;
+            while (!at_end() && peek() >= '0' && peek() <= '9') {
+                ++_at;
+            }
+            return _at > start;
+        };
         if (!at_end() && peek() == '-') {
             ++_at;
         }
-        while (!at_end() && ((peek() >= '0' && peek() <= '9') || peek() == '.' ||
-                             peek() == 'e' || peek() == 'E' || peek() == '+' || peek() == '-')) {
-            ++_at;
-        }
-        if (start == _at) {
+        if (at_end()) {
             return fail("expected a value");
         }
-        const std::string digits = _text.substr(start, _at - start);
-        char* end = nullptr;
-        const double value = std::strtod(digits.c_str(), &end);
-        if (end == nullptr || *end != '\0') {
+        if (peek() == '0') {
+            ++_at;
+        } else if (!digits()) {
+            return fail("expected a value");
+        }
+        if (!at_end() && peek() == '.') {
+            ++_at;
+            if (!digits()) {
+                return fail("malformed number");
+            }
+        }
+        if (!at_end() && (peek() == 'e' || peek() == 'E')) {
+            ++_at;
+            if (!at_end() && (peek() == '+' || peek() == '-')) {
+                ++_at;
+            }
+            if (!digits()) {
+                return fail("malformed number");
+            }
+        }
+        return true;
+    }
+
+    bool parse_number(Value& out) {
+        const std::size_t start = _at;
+        if (!scan_number()) {
+            return false;
+        }
+        // JSON always spells a decimal point as '.', so the conversion must not
+        // follow the host locale. A process that has called setlocale would
+        // otherwise reject every fractional number on a comma-decimal machine.
+        // std::from_chars would be the direct tool, but its floating-point half
+        // is still missing from standard libraries this SDK expects to target.
+        std::istringstream reader(_text.substr(start, _at - start));
+        reader.imbue(std::locale::classic());
+        double value = 0.0;
+        reader >> value;
+        if (reader.fail()) {
             return fail("malformed number");
         }
         out.set_number(value);
@@ -227,6 +270,101 @@ private:
                 return true;
             default:
                 return parse_number(out);
+        }
+    }
+
+    /// Advance past one value without building anything for it.
+    ///
+    /// This is what makes `keep` worth having: a skipped value costs a scan
+    /// and no allocation, so the 5 MB of file inventory in a composition lock
+    /// never becomes 100,000 nodes on the way to reading twenty fields.
+    bool skip_value(int depth) {
+        if (depth > kMaxDepth) {
+            return fail("document nesting exceeds the supported depth");
+        }
+        if (at_end()) {
+            return fail("expected a value");
+        }
+        switch (peek()) {
+            case '"':
+                return skip_string();
+            case 't':
+                return literal("true");
+            case 'f':
+                return literal("false");
+            case 'n':
+                return literal("null");
+            case '[':
+            case '{': {
+                const bool object = peek() == '{';
+                const char close = object ? '}' : ']';
+                ++_at;
+                skip_space();
+                if (!at_end() && peek() == close) {
+                    ++_at;
+                    return true;
+                }
+                while (true) {
+                    skip_space();
+                    if (object) {
+                        if (!skip_string()) {
+                            return false;
+                        }
+                        skip_space();
+                        if (at_end() || peek() != ':') {
+                            return fail("expected a colon after an object member name");
+                        }
+                        ++_at;
+                        skip_space();
+                    }
+                    if (!skip_value(depth + 1)) {
+                        return false;
+                    }
+                    skip_space();
+                    if (at_end()) {
+                        return fail(object ? "unterminated object" : "unterminated array");
+                    }
+                    if (peek() == ',') {
+                        ++_at;
+                        continue;
+                    }
+                    if (peek() == close) {
+                        ++_at;
+                        return true;
+                    }
+                    return fail(object ? "expected a comma or the end of an object"
+                                       : "expected a comma or the end of an array");
+                }
+            }
+            default:
+                return scan_number();
+        }
+    }
+
+    /// Advance past a string without decoding it. Escapes are not interpreted,
+    /// only stepped over, so a `\"` does not end the string.
+    bool skip_string() {
+        if (at_end() || peek() != '"') {
+            return fail("expected a string");
+        }
+        ++_at;
+        while (true) {
+            if (at_end()) {
+                return fail("unterminated string");
+            }
+            const char c = _text[_at++];
+            if (c == '"') {
+                return true;
+            }
+            if (static_cast<unsigned char>(c) < 0x20) {
+                return fail("unescaped control character in a string");
+            }
+            if (c == '\\') {
+                if (at_end()) {
+                    return fail("unterminated escape");
+                }
+                ++_at;
+            }
         }
     }
 
@@ -281,11 +419,20 @@ private:
             }
             ++_at;
             skip_space();
-            Value value;
-            if (!parse_value(value, depth + 1)) {
-                return false;
+            if (_keep != nullptr && !_keep(_path, name)) {
+                if (!skip_value(depth + 1)) {
+                    return false;
+                }
+            } else {
+                Value value;
+                _path.push_back(name);
+                const bool ok = parse_value(value, depth + 1);
+                _path.pop_back();
+                if (!ok) {
+                    return false;
+                }
+                out.insert(std::move(name), std::move(value));
             }
-            out.insert(std::move(name), std::move(value));
             skip_space();
             if (at_end()) {
                 return fail("unterminated object");
@@ -304,6 +451,8 @@ private:
 
     const std::string& _text;
     std::string& _error;
+    MemberFilter _keep;
+    std::vector<std::string> _path;
     std::size_t _at = 0;
 };
 
@@ -329,8 +478,8 @@ const std::string& Value::member_text(const std::string& name) const {
     return member->text();
 }
 
-bool parse(const std::string& text, Value& out, std::string& error) {
-    Parser parser(text, error);
+bool parse(const std::string& text, Value& out, std::string& error, MemberFilter keep) {
+    Parser parser(text, error, keep);
     return parser.run(out);
 }
 
