@@ -13,6 +13,10 @@ Source portability or upstream plugin support does not create a runtime support
 claim. A target requires a committed manifest and lock plus artifact-level
 acceptance evidence.
 
+The machine-readable form of a released target is generated from that target's
+manifest, lock, and accepted evidence and committed next to them; today that is
+`runtime-metadata.windows.json`. Tools should read it instead of this page.
+
 ## Runtime capabilities
 
 | Capability | Provider in v0.1.0 | Verified behavior |
@@ -32,6 +36,9 @@ Vector formats are not part of the current composition.
 The released composed runtime is distributed as a content-addressed OCI
 artifact with an SPDX SBOM and in-toto provenance. Exact digests belong to the
 corresponding [release record](../releases/v0.1.0.md), not this rolling matrix.
+
+The checks behind every verified behavior above are defined in the
+[acceptance contract](acceptance-contract.md).
 
 ## Claim limits
 

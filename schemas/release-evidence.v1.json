@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/animu-sphere/usd-geospatial-runtime/schemas/release-evidence.v1.json",
+  "title": "Release evidence",
+  "description": "Concise immutable result of release acceptance for one composed target. One record is committed per released target and is never rewritten.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "release",
+    "target",
+    "runtime_digest",
+    "composed_artifact",
+    "composed_oci_manifest",
+    "status",
+    "clean_public_input_compose",
+    "clean_composed_artifact_reconstruction",
+    "checks"
+  ],
+  "properties": {
+    "schema": {"const": 1},
+    "release": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "target": {"type": "string", "pattern": "^[a-z0-9]+-[a-z0-9_]+-[a-z0-9]+-py[0-9]{2,3}$"},
+    "runtime_digest": {"$ref": "#/$defs/digest"},
+    "composed_artifact": {"$ref": "#/$defs/digest"},
+    "composed_oci_manifest": {"$ref": "#/$defs/digest"},
+    "status": {"$ref": "#/$defs/status"},
+    "clean_public_input_compose": {
+      "type": "boolean",
+      "description": "The composition was reproduced from public immutable inputs in an empty OST_HOME, without producer paths."
+    },
+    "clean_composed_artifact_reconstruction": {
+      "type": "boolean",
+      "description": "The published composed artifact was pulled into an empty registry, verified, reconstructed, and re-checked."
+    },
+    "checks": {
+      "type": "object",
+      "description": "One entry per required acceptance check. Additional entries are allowed so a target can record capabilities beyond the required set.",
+      "required": ["sdk", "http", "pointcloud", "tier2", "raster"],
+      "properties": {
+        "sdk": {"$ref": "#/$defs/check"},
+        "http": {
+          "allOf": [{"$ref": "#/$defs/check"}],
+          "type": "object",
+          "required": ["status", "cold_body_bytes", "warm_body_bytes", "persistent_cache_hit"],
+          "properties": {
+            "cold_body_bytes": {"type": "integer", "minimum": 0},
+            "warm_body_bytes": {"type": "integer", "minimum": 0},
+            "persistent_cache_hit": {"type": "boolean"}
+          }
+        },
+        "pointcloud": {
+          "allOf": [{"$ref": "#/$defs/check"}],
+          "type": "object",
+          "required": ["status", "formats"],
+          "properties": {
+            "formats": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "tier2": {
+          "allOf": [{"$ref": "#/$defs/check"}],
+          "type": "object",
+          "required": ["status", "scenarios"],
+          "properties": {
+            "scenarios": {"type": "integer", "minimum": 1},
+            "scenarios_with_range_requests": {"type": "integer", "minimum": 0}
+          }
+        },
+        "raster": {
+          "allOf": [{"$ref": "#/$defs/check"}],
+          "type": "object",
+          "required": ["status", "format"],
+          "properties": {
+            "format": {"type": "string", "minLength": 1}
+          }
+        }
+      },
+      "additionalProperties": {"$ref": "#/$defs/check"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "status": {"enum": ["passed", "failed"]},
+    "check": {
+      "description": "A check result. The object form carries measured detail; the bare status string is the shorthand used when a check has no detail to record.",
+      "oneOf": [
+        {"$ref": "#/$defs/status"},
+        {
+          "type": "object",
+          "required": ["status"],
+          "properties": {"status": {"$ref": "#/$defs/status"}}
+        }
+      ]
+    }
+  }
+}

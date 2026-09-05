@@ -1,0 +1,174 @@
+{
+  "schema": "usd-geospatial-runtime.runtime-metadata/v1",
+  "generated_by": {
+    "tool": "tools/runtime_metadata.py",
+    "inputs": {
+      "manifest": "runtime-composition.windows.toml",
+      "lock": "runtime.windows.lock.json",
+      "evidence": "evidence/v0.1.0-windows.json"
+    }
+  },
+  "runtime": {
+    "name": "usd-geospatial-runtime",
+    "version": "0.1.0",
+    "release": "v0.1.0"
+  },
+  "target": {
+    "id": "windows-x86_64-msvc143-py313",
+    "os": "windows",
+    "arch": "x86_64",
+    "toolchain": "msvc143",
+    "host_abi": "py313",
+    "usd_version": "26.08",
+    "host_python": {
+      "version": "3.13",
+      "bundled": false
+    }
+  },
+  "identity": {
+    "manifest_digest": "sha256:016f5a30c926fb2760c3d43fa7bf8175ec682d844c69ee8fae7ef98946a43f17",
+    "composition_digest": "sha256:e31e4cfa66b544a9f369af31749ee2cbd1761923ea9d8b62cfa5e456e1ca0d41",
+    "runtime_digest": "sha256:904b8c12be5668fde17eda3f49c22b5cc30a253a5ffd3cf851d136ea7457f6bc",
+    "composed_artifact": "sha256:e0bc2fb1c6da23e8e3c722eefd6e6b0623aa7c0d0679e41e30a82152e61e1c62",
+    "composed_oci_manifest": "sha256:182e5382cd5096a1f223f6ea65fbd1460d2fc249d68accf6e9f83281404ec3f3",
+    "oci_locator": "oci://ghcr.io/animu-sphere/usd-geospatial-runtime@sha256:182e5382cd5096a1f223f6ea65fbd1460d2fc249d68accf6e9f83281404ec3f3"
+  },
+  "components": [
+    {
+      "id": "openstrata-cy2026-windows-x86_64-py313-usd",
+      "kind": "runtime",
+      "version": "26.08",
+      "artifact": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c",
+      "oci_manifest": "sha256:1c63272c417f43fbded784b6ab88cb5dac6bb58e87d9e69e254f10b87cff3143"
+    },
+    {
+      "id": "usd-http-resolver",
+      "kind": "plugin",
+      "version": "0.5.0",
+      "artifact": "sha256:2f9887eff977d1a800b23a0a0c35d578097c465535a933aa407f31644ee064c8",
+      "oci_manifest": "sha256:2622f2ba04f01b530a447644271b23242dcbf4c4f37f986ade0d517da6a38540"
+    },
+    {
+      "id": "usd-pointcloud-plugins",
+      "kind": "plugin",
+      "version": "0.11.0",
+      "artifact": "sha256:9954ff6788ae1987203bd05e8753c8265523cbad65c2f0a802bbfadb05bbef9e",
+      "oci_manifest": "sha256:0002805ded0c1ce5483ab4d7585e2d09730291bebfb9aae38b48829ab6e8df8e"
+    },
+    {
+      "id": "usd-raster-plugins",
+      "kind": "plugin",
+      "version": "0.1.0",
+      "artifact": "sha256:39c9d553ca60dc5d1f02e698377622d7567574c950d98a3306a010ca97819b28",
+      "oci_manifest": "sha256:29bb6712a73aa422c1196cb7cbaa64403703dbeb7af64f47c5d9536c773024de"
+    },
+    {
+      "id": "usdAssetCache",
+      "kind": "library",
+      "version": "0.3.0",
+      "artifact": "sha256:79a343a0e76a07bcdcf500a064cefefe1665d07bb2f1ec9ea966d23acc373027",
+      "oci_manifest": "sha256:d38e7cc842ea3634ae8db777ed275f8640f4411f03fc97bb2a9180f058ebbf95"
+    },
+    {
+      "id": "usdAssetHttp",
+      "kind": "library",
+      "version": "0.2.0",
+      "artifact": "sha256:fbf496e0c7f0f957e09452a856112bbfc443dd6db4d0c83c548871d6edb43234",
+      "oci_manifest": "sha256:321373f9f7bb69a1a5534f5cf0abe218e329d0beab7a4724de9c66cd107fb045"
+    },
+    {
+      "id": "usdAssetIo",
+      "kind": "library",
+      "version": "0.1.0",
+      "artifact": "sha256:53df2095a1b2334f4d93b7eaa3b6533c61510195548e8b5e968d91b4c4e91a8a",
+      "oci_manifest": "sha256:bf309dc66767d31898b6817e41599919bbc39f6be22c15865024ebd7459b1cc0"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability": "library:usdAssetCache",
+      "required": false,
+      "component": "usdAssetCache",
+      "version": "0.3.0",
+      "artifact": "sha256:79a343a0e76a07bcdcf500a064cefefe1665d07bb2f1ec9ea966d23acc373027"
+    },
+    {
+      "capability": "library:usdAssetHttp",
+      "required": false,
+      "component": "usdAssetHttp",
+      "version": "0.2.0",
+      "artifact": "sha256:fbf496e0c7f0f957e09452a856112bbfc443dd6db4d0c83c548871d6edb43234"
+    },
+    {
+      "capability": "library:usdAssetIo",
+      "required": false,
+      "component": "usdAssetIo",
+      "version": "0.1.0",
+      "artifact": "sha256:53df2095a1b2334f4d93b7eaa3b6533c61510195548e8b5e968d91b4c4e91a8a"
+    },
+    {
+      "capability": "usd",
+      "required": true,
+      "component": "openstrata-cy2026-windows-x86_64-py313-usd",
+      "version": "26.08",
+      "artifact": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c",
+      "requirement": "26.08"
+    },
+    {
+      "capability": "usd-fileformat:copc",
+      "required": true,
+      "component": "usd-pointcloud-plugins",
+      "version": "0.11.0",
+      "artifact": "sha256:9954ff6788ae1987203bd05e8753c8265523cbad65c2f0a802bbfadb05bbef9e"
+    },
+    {
+      "capability": "usd-fileformat:las",
+      "required": true,
+      "component": "usd-pointcloud-plugins",
+      "version": "0.11.0",
+      "artifact": "sha256:9954ff6788ae1987203bd05e8753c8265523cbad65c2f0a802bbfadb05bbef9e"
+    },
+    {
+      "capability": "usd-fileformat:laz",
+      "required": true,
+      "component": "usd-pointcloud-plugins",
+      "version": "0.11.0",
+      "artifact": "sha256:9954ff6788ae1987203bd05e8753c8265523cbad65c2f0a802bbfadb05bbef9e"
+    },
+    {
+      "capability": "usd-fileformat:ply",
+      "required": true,
+      "component": "usd-pointcloud-plugins",
+      "version": "0.11.0",
+      "artifact": "sha256:9954ff6788ae1987203bd05e8753c8265523cbad65c2f0a802bbfadb05bbef9e"
+    },
+    {
+      "capability": "usd-fileformat:tif",
+      "required": true,
+      "component": "usd-raster-plugins",
+      "version": "0.1.0",
+      "artifact": "sha256:39c9d553ca60dc5d1f02e698377622d7567574c950d98a3306a010ca97819b28"
+    },
+    {
+      "capability": "usd-resolver:http",
+      "required": true,
+      "component": "usd-http-resolver",
+      "version": "0.5.0",
+      "artifact": "sha256:2f9887eff977d1a800b23a0a0c35d578097c465535a933aa407f31644ee064c8",
+      "requirement": ">=0.5,<0.6"
+    },
+    {
+      "capability": "usd-stage-read",
+      "required": false,
+      "component": "openstrata-cy2026-windows-x86_64-py313-usd",
+      "version": "26.08",
+      "artifact": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c"
+    }
+  ],
+  "evidence": {
+    "release": "v0.1.0",
+    "status": "passed",
+    "evidence_file": "evidence/v0.1.0-windows.json",
+    "release_record": "docs/releases/v0.1.0.md"
+  }
+}

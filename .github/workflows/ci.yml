@@ -16,31 +16,12 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.13'
-      - name: Validate release metadata and immutable pins
+      - name: Compile the repository tools
         shell: bash
-        run: |
-          set -euo pipefail
-          python -m py_compile tools/accept.py
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          import tomllib
-
-          manifest = tomllib.loads(Path('runtime-composition.windows.toml').read_text())
-          lock = json.loads(Path('runtime.windows.lock.json').read_text())
-          evidence = json.loads(Path('evidence/v0.1.0-windows.json').read_text())
-          assert lock['manifest']['composition'] == manifest['composition']
-          assert lock['manifest']['providers'] == manifest['providers']
-          assert {x['artifact']: x['source'] for x in lock['manifest']['artifacts']} == {x['artifact']: x['source'] for x in manifest['artifacts']}
-          assert {tuple(sorted(x.items())) for x in lock['manifest']['requirements']} == {tuple(sorted(x.items())) for x in manifest['requirements']}
-          assert lock['runtime_digest'] == evidence['runtime_digest']
-          assert evidence['status'] == 'passed'
-          artifacts = manifest['artifacts']
-          assert len(artifacts) == 7
-          for item in artifacts:
-              assert item['artifact'].startswith('sha256:')
-              assert item['source'].startswith('oci://')
-              assert '@sha256:' in item['source']
-              assert ':' not in item['source'].split('@', 1)[0].rsplit('/', 1)[-1]
-          print('metadata: ok')
-          PY
+        run: python -m compileall -q tools tests/tooling
+      - name: Validate composition, metadata, and release evidence
+        shell: bash
+        run: python tools/validate_metadata.py
+      - name: Test the metadata and acceptance tooling
+        shell: bash
+        run: python tests/tooling/test_metadata_tools.py
