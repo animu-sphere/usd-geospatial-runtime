@@ -56,9 +56,9 @@ names so a loaded runtime can be compared with a released one field by field.
 
 `formats` answers what this runtime can read. Two lists answer that and they
 are not the same question: the composition resolved a set of
-`usd-fileformat:` capabilities, and OpenUSD registered the file formats whose
-plugins actually loaded. Each extension is therefore reported with the state
-that says which of the two claimed it:
+`usd-fileformat:` capabilities, and OpenUSD will dispatch the file formats
+whose plugins actually load. Each extension is therefore reported with the
+state that says which of the two claimed it:
 
 ```cpp
 for (const auto& format : usd_geospatial::formats(runtime.value())) {
@@ -72,13 +72,21 @@ for (const auto& format : usd_geospatial::formats(runtime.value())) {
 ```
 
 `not_loaded` is the one worth wiring into a diagnostic: it is a plugin this
-composition installed and OpenUSD did not register, and `format.component`
-names what to look at. `undeclared` is ordinary — it is how OpenUSD's own
-`usda`, `usdc`, and `usdz` appear, since no capability declares them.
-Reporting only the composed list, only the registered list, or their
-intersection would erase exactly that distinction, so none of the three is what
-this returns. `formats_to_json` serializes a report as
+composition installed that OpenUSD cannot produce a file format for — it never
+registered the extension, or it registered it and its library failed to load —
+and `format.component` names what to look at. `undeclared` is ordinary — it is
+how OpenUSD's own `usda`, `usdc`, and `usdz` appear, since no capability
+declares them. Reporting only the composed list, only the dispatched list, or
+their intersection would erase exactly that distinction, so none of the three
+is what this returns. `formats_to_json` serializes a report as
 [`schemas/formats.v1.json`](../schemas/formats.v1.json).
+
+The second list is obtained by asking OpenUSD for the file format of each
+extension it has metadata for, not by reading that metadata: the plugInfo index
+lists an extension whether or not the library behind it loads, so a report
+built from it would call a broken plugin `available` and never reach
+`not_loaded`. Answering therefore loads every registered format plugin.
+`runtime_info` remains the introspection that loads nothing.
 
 Failures carry a stable code, a category, the subsystem that observed them, and
 structured details. The codes are listed in

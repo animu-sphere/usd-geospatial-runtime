@@ -50,16 +50,24 @@ runtime -- or report that there is none -- before any OpenUSD library loads.
 
 `formats()` does this against `schemas/formats.v1.json`, and it reports none of
 the three candidate answers. The capabilities the composition resolved and the
-extensions OpenUSD registered differ exactly when a plugin fails to load, which
-is when the answer matters most, so choosing either list would report a
+formats OpenUSD dispatches differ exactly when a plugin fails to load, which is
+when the answer matters most, so choosing either list would report a
 composition that is broken as if it were fine or as if the format had never
 been asked for, and reporting their intersection would hide the failure
 entirely. Every extension is therefore reported with the state that says which
 source claimed it -- `available`, `not_loaded`, `undeclared` -- and a caller
 that only wants what it can open filters on `available` in one predicate. The
 rule is a pure function of the two lists, so it lives in the OpenUSD-free lane
-and is tested without a runtime; only obtaining the registered list needs a
-loaded OpenUSD.
+and is tested without a runtime; only obtaining the second list needs a loaded
+OpenUSD.
+
+That list must be what OpenUSD will actually dispatch, which is not what its
+plugin metadata declares. The metadata index names an extension whether or not
+the library behind it can load, so a report built from it would contradict
+`open()` on the one runtime state the operation exists to name. Each candidate
+is asked for its file format instead, which costs the load of every registered
+format plugin -- the price of an introspection answer that agrees with the
+operation it predicts.
 
 `inspect()` remains undefined. It needs a stated result -- what it reports for
 an asset that opens, and what it reports for one that does not -- before it has

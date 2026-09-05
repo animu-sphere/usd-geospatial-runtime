@@ -28,7 +28,7 @@ package, a Wasm module, a vector provider, or a Linux/macOS composition.
 | `sdk/core` | The OpenUSD-free SDK lane: diagnostic codes, `Result<T>`, `runtime_info`, and the rule that decides what a runtime supports. |
 | `sdk/usd` | The OpenUSD SDK lane: `open` and `formats`. |
 | `fixtures/three-points.copc` | Supplies a small deterministic COPC integration input. |
-| `fixtures/malformed.usda` | Supplies an asset of a composed format that OpenUSD refuses, which is the only way to reach `stage_open_failed`. |
+| `fixtures/malformed.usda` | Supplies an asset that OpenUSD dispatches and then refuses, which is the only way to reach `stage_open_failed`. |
 | `tests/native-consumer` | Verifies that a separate CMake consumer can find and link the composed `usdAssetIo` package and the installed SDK. |
 | `tests/tooling` | Tests the metadata generator, schemas, validator, and acceptance-report shape. |
 | `evidence/v0.1.0-windows.json` | Preserves the concise accepted-release result and immutable runtime identities. |
@@ -117,15 +117,19 @@ metadata, sharing its field names so the two can be compared field by field.
 
 `formats` answers what the runtime can read, and it is the one operation whose
 two sources disagree in a way that matters. The composition resolved a set of
-`usd-fileformat:` capabilities; OpenUSD registered the formats whose plugins
-loaded. Reporting either list alone, or their intersection, would erase the two
+`usd-fileformat:` capabilities; OpenUSD dispatches the formats whose plugins
+load. Reporting either list alone, or their intersection, would erase the two
 cases worth acting on, so every extension is reported with the state that says
-which source claimed it: `available`, `not_loaded` for a composed plugin that
-did not register, and `undeclared` for a registered format no capability
-declared, which is how OpenUSD's own formats appear. The join is
-`format_support` in the core lane, so the rule is tested per commit against a
-fixture lock and a fixed registered list; only the registered list itself needs
-a loaded runtime. Its serialized form is `schemas/formats.v1.json`.
+which source claimed it: `available`, `not_loaded` for a composed plugin
+OpenUSD produces no format for, and `undeclared` for a dispatched format no
+capability declared, which is how OpenUSD's own formats appear. That second
+list is obtained by asking OpenUSD for each format rather than by reading the
+plugInfo index, which names extensions whose libraries may not load, so
+answering loads every registered format plugin; `runtime_info` remains the
+introspection that loads nothing. The join is `format_support` in the core
+lane, so the rule is tested per commit against a fixture lock and a fixed
+registered list; only obtaining the list needs a loaded runtime. Its serialized
+form is `schemas/formats.v1.json`.
 
 The contract is held from both sides: `sdk/core/tests/test_core.cpp` asserts
 that the SDK produces exactly the committed documents in

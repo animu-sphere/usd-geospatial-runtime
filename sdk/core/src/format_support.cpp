@@ -79,7 +79,7 @@ std::vector<Format> format_support(const RuntimeInfo& runtime,
     std::vector<Format> formats;
 
     // The composed side first, so every declared format appears even when
-    // OpenUSD registered nothing at all -- which is what a caller inspecting a
+    // OpenUSD dispatches nothing at all -- which is what a caller inspecting a
     // runtime whose plugins failed to load needs to see.
     for (const Capability& capability : runtime.capabilities()) {
         const std::string extension = format_extension(capability.name);
@@ -89,7 +89,12 @@ std::vector<Format> format_support(const RuntimeInfo& runtime,
         Format format;
         format.extension = extension;
         format.state = FormatState::not_loaded;
-        format.capability = capability.name;
+        // The canonical spelling of the extension, not the lock's literal
+        // string. The two are the same in every conforming lock, and where a
+        // lock spells a capability differently -- a capital letter, a leading
+        // dot -- an entry that kept it would name a capability its own
+        // `extension` contradicts and would fail schemas/formats.v1.json.
+        format.capability = format_capability(extension);
         format.component = capability.component;
         format.version = capability.version;
         format.artifact = capability.artifact;

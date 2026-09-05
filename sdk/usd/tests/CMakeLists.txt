@@ -11,8 +11,8 @@ endif()
 set(_usdgeospatial_prefix "${pxr_DIR}")
 set(_usdgeospatial_fixtures "${CMAKE_CURRENT_SOURCE_DIR}/../../../fixtures")
 set(_usdgeospatial_fixture "${_usdgeospatial_fixtures}/three-points.copc")
-# A malformed asset of a composed format, which is the only way to reach
-# stage_open_failed: every check open() makes before it has to pass first.
+# A malformed asset of a format OpenUSD dispatches, which is the only way to
+# reach stage_open_failed: every check open() makes before it has to pass first.
 set(_usdgeospatial_malformed "${_usdgeospatial_fixtures}/malformed.usda")
 
 if(EXISTS "${_usdgeospatial_prefix}/metadata/composition.lock.json" AND

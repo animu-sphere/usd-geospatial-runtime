@@ -16,6 +16,9 @@
 #include "json.h"
 
 #include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -331,10 +334,10 @@ void test_runtime_info_rejects_bad_input() {
 }
 
 /// The two answers to "which formats does this runtime have" are joined, not
-/// collapsed. A composed format OpenUSD did not register stays visible as
-/// `not_loaded` and a registered format the composition never asked for stays
-/// visible as `undeclared`, because reporting either list alone -- or their
-/// intersection -- erases exactly the case a caller needs to act on.
+/// collapsed. A composed format OpenUSD produced no format for stays visible
+/// as `not_loaded` and a dispatched format the composition never asked for
+/// stays visible as `undeclared`, because reporting either list alone -- or
+/// their intersection -- erases exactly the case a caller needs to act on.
 void test_format_support() {
     Result<RuntimeInfo> runtime =
         RuntimeInfo::from_lock_json(read("composition.lock.json"), "/example/prefix");
@@ -381,7 +384,7 @@ void test_format_support() {
     CHECK(noisy[2].extension == "usda");
     CHECK(noisy[2].state == FormatState::undeclared);
 
-    // A runtime that registered nothing still reports every format the
+    // A runtime that dispatches nothing still reports every format the
     // composition declared. That is the difference between "this runtime does
     // not read GeoJSON" and "this runtime is broken".
     const std::vector<Format> nothing = format_support(runtime.value(), {});
@@ -389,7 +392,25 @@ void test_format_support() {
     for (const Format& format : nothing) {
         CHECK(format.state == FormatState::not_loaded);
     }
+
+    // A lock that spells a capability differently -- a capital letter here --
+    // still resolves to one format, and the entry names the capability its own
+    // extension implies. An entry that kept the lock's literal string would
+    // contradict its own `extension` and fail schemas/formats.v1.json.
+    std::string mutated = read("composition.lock.json");
+    const std::string spelling = "usd-fileformat:geojson";
+    const std::size_t at = mutated.find(spelling);
+    CHECK(at != std::string::npos);
+    mutated.replace(at, spelling.size(), "usd-fileformat:GeoJSON");
+    Result<RuntimeInfo> odd = RuntimeInfo::from_lock_json(mutated, "/example/prefix");
+    CHECK(odd.ok());
+    const std::vector<Format> spelled = format_support(odd.value(), {"geojson"});
+    CHECK(spelled.size() == 2);
+    CHECK(spelled[1].extension == "geojson");
+    CHECK(spelled[1].capability == "usd-fileformat:geojson");
+    CHECK(spelled[1].state == FormatState::available);
 }
+
 
 /// `open` reports the capability a composition would have to add and
 /// `format_support` reads the capability a composition did add. Both spell the
@@ -444,9 +465,15 @@ void test_runtime_info_from_prefix() {
 void test_runtime_info_rejects_an_unreadable_lock() {
     namespace fs = std::filesystem;
     std::error_code status;
-    const fs::path prefix = fs::temp_directory_path(status) / "usdgeospatial-unreadable-lock";
+    // The path is unique per process. Two runs of this suite at once -- a
+    // multi-config build, `ctest -j`, two CI jobs on one runner -- would
+    // otherwise delete each other's fixture and fail on the wrong condition.
+    const std::string unique =
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-" +
+        std::to_string(reinterpret_cast<std::uintptr_t>(&status));
+    const fs::path prefix =
+        fs::temp_directory_path(status) / ("usdgeospatial-unreadable-lock-" + unique);
     CHECK(!status);
-    fs::remove_all(prefix, status);
     fs::create_directories(prefix / "metadata" / "composition.lock.json", status);
     CHECK(!status);
 

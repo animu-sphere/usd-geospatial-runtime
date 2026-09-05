@@ -11,16 +11,23 @@
 
 namespace usd_geospatial {
 
-/// The extensions OpenUSD has a file format for in this process, lowercased
+/// The extensions OpenUSD will actually dispatch in this process, lowercased
 /// and sorted.
 ///
-/// OpenUSD posts its own errors while it registers plugins, and this clears
-/// them for the same reason `open` does: the caller gets a value, so anything
-/// left on the error list would surface later as unexplained noise or trip an
-/// unrelated `TfErrorMark`. Nothing is lost that the report does not already
-/// carry -- a plugin that failed to load is exactly what `not_loaded` says --
-/// and the text itself is still relayed by `open` when a caller tries to use
-/// the format.
+/// This is not the extension index OpenUSD builds from plugInfo.json metadata.
+/// That index lists an extension whether or not the library behind it can be
+/// loaded, so it cannot tell a working plugin from one that ships and fails to
+/// load. Each candidate is therefore asked for its file format, which is the
+/// call `open` dispatches on, and answering costs the load of every registered
+/// format plugin.
+///
+/// OpenUSD posts its own errors while it registers and loads plugins, and this
+/// clears them for the same reason `open` does: the caller gets a value, so
+/// anything left on the error list would surface later as unexplained noise or
+/// trip an unrelated `TfErrorMark`. Nothing is lost that the report does not
+/// already carry -- a plugin that failed to load is exactly what `not_loaded`
+/// says -- and the text itself is still relayed by `open` when a caller tries
+/// to use the format.
 std::vector<std::string> registered_extensions();
 
 /// Report every file format this runtime knows about.
@@ -28,16 +35,17 @@ std::vector<std::string> registered_extensions();
 /// The report is the union of two lists that are usually the same and are not
 /// the same question. `runtime_info().capabilities()` is what the composition
 /// resolved: it is readable without OpenUSD and it is a claim about what was
-/// installed. What OpenUSD registered is a claim about what loaded. A format
-/// that is composed but not registered is a plugin that failed to load, and a
-/// format that is registered but not composed is one this composition never
-/// asked for -- OpenUSD's own `usda`, `usdc`, and `usdz`, or something that
-/// reached the plugin path from outside. Reporting only one list, or only
-/// their intersection, would erase the difference exactly where a caller needs
-/// it, so every extension is reported with its `FormatState`.
+/// installed. What OpenUSD dispatches is a claim about what loaded. A format
+/// that is composed but not dispatched is a plugin that never registered its
+/// extension or registered it and failed to load, and a format that is
+/// dispatched but not composed is one this composition never asked for --
+/// OpenUSD's own `usda`, `usdc`, and `usdz`, or something that reached the
+/// plugin path from outside. Reporting only one list, or only their
+/// intersection, would erase the difference exactly where a caller needs it,
+/// so every extension is reported with its `FormatState`.
 ///
 /// These declarations are in the OpenUSD lane, and only these, because the
-/// registered list can only be had from a loaded OpenUSD. The rule that turns
+/// dispatched list can only be had from a loaded OpenUSD. The rule that turns
 /// the two lists into one report is `format_support` in the core lane, where
 /// it is tested without a runtime.
 ///

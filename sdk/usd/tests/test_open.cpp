@@ -7,8 +7,8 @@
 // aborts, which is what CTest reads.
 //
 // argv[1] is the composed runtime prefix, argv[2] is a readable point-cloud
-// fixture, and argv[3] is a deliberately malformed asset of a composed format;
-// CMake passes all three.
+// fixture, and argv[3] is a deliberately malformed asset of a format OpenUSD
+// dispatches; CMake passes all three.
 
 #include <usd_geospatial/formats.h>
 #include <usd_geospatial/open.h>
@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -92,7 +93,9 @@ void test_reports_a_missing_asset() {
 
 /// The last condition open() separates: the asset resolved, its file format is
 /// present, and OpenUSD still declined. Reaching it needs a malformed asset of
-/// a composed format, because every earlier check has to pass first.
+/// a format OpenUSD dispatches -- `usda`, which the composed OpenUSD provides
+/// itself rather than through a capability -- because every earlier check has
+/// to pass first.
 void test_reports_a_malformed_asset(const std::string& malformed) {
     Result<pxr::UsdStageRefPtr> result = open(malformed);
     CHECK(!result.ok());
@@ -141,10 +144,11 @@ void test_runtime_info_matches_the_prefix(const std::string& prefix) {
     std::printf("%s\n", info.to_json().c_str());
 }
 
-/// formats() joins what the composition resolved with what OpenUSD registered.
+/// formats() joins what the composition resolved with what OpenUSD dispatches.
 /// In a healthy runtime the two agree on every composed format, and asserting
 /// that they do is what this test is for: a plugin that ships and does not load
-/// passes every other test in this file.
+/// passes every other test in this file, because nothing else here opens an
+/// asset of the format it was supposed to provide.
 void test_formats_report(const std::string& prefix) {
     Result<RuntimeInfo> runtime = runtime_info(prefix);
     if (!runtime.ok()) {
@@ -154,13 +158,17 @@ void test_formats_report(const std::string& prefix) {
     const std::vector<Format> supported = formats(runtime.value());
     CHECK(!supported.empty());
 
-    std::size_t declared = 0;
+    // Counted as extensions, not as capabilities: two capabilities that
+    // normalize to one extension are one format in the report, and comparing
+    // against a capability count would fail on the report being right.
+    std::set<std::string> declared;
     for (const Capability& capability : runtime.value().capabilities()) {
-        if (!format_extension(capability.name).empty()) {
-            ++declared;
+        const std::string extension = format_extension(capability.name);
+        if (!extension.empty()) {
+            declared.insert(extension);
         }
     }
-    CHECK(declared > 0);
+    CHECK(!declared.empty());
 
     std::size_t composed = 0;
     bool copc = false;
@@ -171,8 +179,10 @@ void test_formats_report(const std::string& prefix) {
             CHECK(format.capability == format_capability(format.extension));
             CHECK(!format.component.empty());
             // Every format this composition resolved must also have loaded.
-            // The capability name is the failure message, because it is what
-            // names the plugin to look at.
+            // This is a real assertion because registered_extensions() asks
+            // OpenUSD for each format rather than reading the plugInfo index,
+            // so a plugin that ships and fails to load fails here. The
+            // capability name is the failure message: it names what to look at.
             Check(format.state == FormatState::available, format.capability.c_str());
             copc = copc || format.extension == "copc";
         } else {
@@ -183,7 +193,7 @@ void test_formats_report(const std::string& prefix) {
             own = own || format.extension == "usda";
         }
     }
-    CHECK(composed == declared);
+    CHECK(composed == declared.size());
     CHECK(copc);
     CHECK(own);
 

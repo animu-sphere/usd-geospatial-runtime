@@ -85,7 +85,7 @@ needs a loaded runtime.
   commit; the OpenUSD lane needs a composed prefix and a toolchain matching the
   target, so it belongs with acceptance rather than with the per-commit checks
   and has no runner yet. Its tests now cover `formats` and every `open` failure
-  path, so nothing about them is proven until that runner exists.
+  path, but none of that is proven until that runner exists.
 - Decide how the SDK is delivered. It is currently built from source against a
   prefix. Publishing it as an OpenStrata component would let a consumer acquire
   it the way every other component is acquired, and would let `runtime_info`
