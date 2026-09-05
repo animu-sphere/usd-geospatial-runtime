@@ -7,8 +7,10 @@ The repository currently publishes one immutable OpenStrata composition for
 its asset I/O/cache dependencies, point-cloud FileFormat plugins for LAS, LAZ,
 COPC, and PLY, and a raster FileFormat plugin for GeoTIFF.
 
-The repository does not yet implement a `usd_geospatial` C++ SDK, Python
-package, Node package, Wasm module, vector provider, or Linux/macOS composition.
+It also implements the first part of the `usd_geospatial` C++ SDK: the failure
+vocabulary, `Result<T>`, `runtime_info`, and `open`. The repository does not yet
+implement the `inspect` or `formats` operations, a Python package, a Node
+package, a Wasm module, a vector provider, or a Linux/macOS composition.
 
 ## Repository surfaces
 
@@ -22,8 +24,11 @@ package, Node package, Wasm module, vector provider, or Linux/macOS composition.
 | `tools/runtime_metadata.py` | Generates the runtime metadata documents from the manifest, lock, and accepted evidence. |
 | `tools/validate_metadata.py` | Validates the committed composition, metadata, and evidence documents in CI and on release tags. |
 | `tools/jsonschema_lite.py` | Dependency-free JSON Schema subset used by the repository tools. |
+| `tools/sdk_env.py` | Layers a composed prefix's search paths onto the host environment so native code can be built and tested against it. |
+| `sdk/core` | The OpenUSD-free SDK lane: diagnostic codes, `Result<T>`, and `runtime_info`. |
+| `sdk/usd` | The OpenUSD SDK lane: `open`. |
 | `fixtures/three-points.copc` | Supplies a small deterministic COPC integration input. |
-| `tests/native-consumer` | Verifies that a separate CMake consumer can find and link the composed `usdAssetIo` package. |
+| `tests/native-consumer` | Verifies that a separate CMake consumer can find and link the composed `usdAssetIo` package and the installed SDK. |
 | `tests/tooling` | Tests the metadata generator, schemas, validator, and acceptance-report shape. |
 | `evidence/v0.1.0-windows.json` | Preserves the concise accepted-release result and immutable runtime identities. |
 | `docs/releases` | Records versioned scope, inputs, distribution identities, results, and limitations. |
@@ -89,6 +94,38 @@ release claim.
 
 The required checks and the committed evidence shape are recorded in the
 [acceptance contract](../reference/acceptance-contract.md).
+
+## SDK boundary
+
+The SDK is a convenience layer over the composition, not a second scene graph.
+`usd_geospatial::open` returns an ordinary `pxr::UsdStageRefPtr` and every
+`pxr::*` API stays reachable below it; what the SDK adds is a typed failure in
+place of a null pointer plus loose diagnostic text. Its codes are published in
+[the diagnostics reference](../reference/diagnostics.md), and a caller branches
+on the code, never on the message.
+
+It is built in two lanes. The core lane compiles with no OpenUSD present and
+carries the diagnostics, the result type, and `runtime_info`; the OpenUSD lane
+carries `open`. `runtime_info` reads the materialized prefix's own
+`metadata/composition.lock.json`, so it describes the runtime that is present
+rather than the one a build was configured against, and it can report a missing
+or wrong runtime before any OpenUSD library is loaded. Its serialized form is
+`schemas/runtime-info.v1.json`, the introspection subset of the released runtime
+metadata, sharing its field names so the two can be compared field by field.
+
+The contract is held from both sides: `sdk/core/tests/test_core.cpp` asserts
+that the SDK produces exactly the committed document in
+`sdk/core/tests/data/runtime-info.json`, and `tests/tooling` asserts that the
+same document satisfies the schema, agrees with the lock it was read from, and
+lists the same diagnostic codes the SDK source defines. Neither side can move
+alone.
+
+Consuming the SDK natively needs the host CPython on the library search path,
+because the composed OpenUSD links `python313.dll` and this composition does not
+bundle an interpreter. `tools/sdk_env.py` layers the composition's search paths
+onto the host environment for that reason; `ost runtime exec`, which replaces
+the environment instead, remains the runner for anything whose result is a claim
+about the runtime. See [sdk/README.md](../../sdk/README.md).
 
 ## Distribution boundary
 

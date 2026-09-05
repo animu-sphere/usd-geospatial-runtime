@@ -1,0 +1,66 @@
+{
+  "schema": "openstrata.runtime-composition-lock/v1alpha1",
+  "resolved": {
+    "schema": "openstrata.runtime-composition-resolved/v1alpha1",
+    "name": "example-runtime",
+    "target": "linux-x86_64-gcc13-py313",
+    "manifest_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "composition_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "components": [
+      {
+        "id": "example-vector-plugins",
+        "kind": "plugin",
+        "version": "0.4.2",
+        "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "target": "cy2026-linux-x86_64-py313-usd"
+      },
+      {
+        "id": "example-usd",
+        "kind": "runtime",
+        "version": "26.08",
+        "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "target": "linux-x86_64-gcc13-py313"
+      },
+      {
+        "id": "example-asset-io",
+        "kind": "library",
+        "version": "0.1.0",
+        "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "target": "cy2026-linux-x86_64-py313-usd"
+      }
+    ],
+    "providers": [
+      {
+        "capability": "usd-fileformat:geojson",
+        "component": "example-vector-plugins",
+        "version": "0.4.2",
+        "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      {
+        "capability": "usd",
+        "component": "example-usd",
+        "version": "26.08",
+        "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      {
+        "capability": "library:example-asset-io",
+        "component": "example-asset-io",
+        "version": "0.1.0",
+        "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+      }
+    ],
+    "install": [
+      {
+        "destination": "lib/libexampleUsd.so",
+        "component": "example-usd",
+        "source": "lib/libexampleUsd.so"
+      },
+      {
+        "destination": "share/example-vector-plugins/probes/packaged_probe.py",
+        "component": "example-vector-plugins",
+        "source": "share/probes/packaged_probe.py"
+      }
+    ]
+  },
+  "runtime_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+}

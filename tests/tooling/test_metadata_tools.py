@@ -10,12 +10,14 @@ import copy
 import io
 import json
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
 import traceback
 
 ROOT = Path(__file__).resolve().parents[2]
+SDK_TEST_DATA = ROOT / "sdk/core/tests/data"
 sys.path.insert(0, str(ROOT / "tools"))
 
 import accept
@@ -112,6 +114,111 @@ def test_lite_validator_resolves_references_and_alternatives():
     assert not jsonschema_lite.errors_for({"result": {"status": "failed", "detail": 1}}, document)
     rejects({"result": "unknown"}, document, "a status outside the enum")
     rejects({"result": {}}, document, "an object without a status")
+
+
+def runtime_info_document():
+    return json.loads((SDK_TEST_DATA / "runtime-info.json").read_text(encoding="utf-8"))
+
+
+def test_runtime_info_schema_matches_the_document_the_sdk_emits():
+    """The committed document is the contract shared by the SDK and this schema.
+
+    `sdk/core/tests/test_core.cpp` asserts that `RuntimeInfo::to_json` produces
+    this exact text, and this asserts that the same text satisfies the schema.
+    Neither side can move alone.
+    """
+    document = schema("runtime-info.v1.json")
+    instance = runtime_info_document()
+    assert not jsonschema_lite.errors_for(instance, document)
+
+    record = runtime_info_document()
+    del record["identity"]["runtime_digest"]
+    rejects(record, document, "a runtime with no runtime digest")
+
+    record = runtime_info_document()
+    record["target"]["id"] = "windows-x86_64-py313"
+    rejects(record, document, "a target that is not canonical")
+
+    record = runtime_info_document()
+    record["capabilities"] = []
+    rejects(record, document, "a runtime that resolves no capability")
+
+    record = runtime_info_document()
+    record["components"][0]["kind"] = "bundle"
+    rejects(record, document, "a component of an unknown kind")
+
+    record = runtime_info_document()
+    record["evidence"] = {"release": "v0.1.0"}
+    rejects(record, document, "release facts a materialized prefix cannot know")
+
+
+def test_runtime_info_document_describes_the_lock_it_was_read_from():
+    """The document is generated, so it must agree with its input fixture."""
+    lock = json.loads((SDK_TEST_DATA / "composition.lock.json").read_text(encoding="utf-8"))
+    info = runtime_info_document()
+    resolved = lock["resolved"]
+
+    assert info["runtime"]["name"] == resolved["name"]
+    assert info["identity"]["runtime_digest"] == lock["runtime_digest"]
+    assert info["identity"]["manifest_digest"] == resolved["manifest_digest"]
+    assert info["identity"]["composition_digest"] == resolved["composition_digest"]
+
+    # The SDK decomposes the target exactly as runtime_metadata.target_identity
+    # does, so the two descriptions of one runtime cannot disagree.
+    expected = runtime_metadata.target_identity(
+        resolved["target"],
+        info["target"]["usd_version"],
+        any(runtime_metadata.INTERPRETER_PATTERN.search(item["destination"])
+            for item in resolved["install"]),
+    )
+    assert info["target"] == expected
+
+    assert [item["id"] for item in info["components"]] == sorted(
+        item["id"] for item in resolved["components"]
+    ), "components must be sorted by id so equal runtimes serialize equally"
+    assert [item["capability"] for item in info["capabilities"]] == sorted(
+        item["capability"] for item in resolved["providers"]
+    )
+    for component in info["components"]:
+        source = next(item for item in resolved["components"] if item["id"] == component["id"])
+        assert component["artifact"] == source["digest"]
+        assert component["version"] == source["version"]
+
+    usd = next(item for item in info["capabilities"] if item["capability"] == "usd")
+    assert info["target"]["usd_version"] == usd["version"]
+
+
+def test_diagnostic_reference_matches_the_sdk_source():
+    """The published code table cannot drift from the one the SDK compiles.
+
+    Codes are an automation contract: a caller branches on `UGEO-E031` because
+    this repository published it. Reading both tables here means a renamed or
+    renumbered code fails CI rather than silently invalidating the reference.
+    """
+    source = (ROOT / "sdk/core/src/diagnostics.cpp").read_text(encoding="utf-8")
+    ids = dict(re.findall(r'case DiagnosticCode::(\w+): return "(UGEO-E\d+)";', source))
+    categories = {}
+    grouped = re.findall(r"((?:\s*case DiagnosticCode::\w+:\n)+)\s*return Category::(\w+);", source)
+    for group, name in grouped:
+        for member in re.findall(r"DiagnosticCode::(\w+)", group):
+            categories[member] = name
+    assert ids, "no diagnostic ids were found in the SDK source"
+    assert set(categories) == set(ids), "every code must be given a category"
+
+    page = (ROOT / "docs/reference/diagnostics.md").read_text(encoding="utf-8")
+    rows = re.findall(r"^\| `(UGEO-E\d+)` \| `(\w+)` \| (\w+) \|", page, re.MULTILINE)
+    assert rows, "the diagnostics reference lists no codes"
+
+    documented = {name: (code, category) for code, name, category in rows}
+    assert set(documented) == set(ids), (
+        "the diagnostics reference and the SDK source list different codes: "
+        f"{sorted(set(documented) ^ set(ids))}"
+    )
+    for name, (code, category) in documented.items():
+        assert ids[name] == code, f"{name} is {ids[name]} in the SDK and {code} in the reference"
+        assert categories[name] == category, f"{name} has a different category in the reference"
+
+    assert len(set(ids.values())) == len(ids), "two codes share an id"
 
 
 def test_release_evidence_schema_rejects_incomplete_records():

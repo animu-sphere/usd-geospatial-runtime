@@ -62,6 +62,29 @@ python tests/tooling/test_metadata_tools.py
 These commands run in CI and need only CPython 3.13; the repository installs no
 Python packages.
 
+## Use it from C++
+
+`sdk/` holds a small consumer API over the composition. It does not hide
+OpenUSD: `open` returns an ordinary `pxr::UsdStageRefPtr`, and what the SDK adds
+is a typed failure and machine-readable introspection.
+
+```cpp
+auto runtime = usd_geospatial::runtime_info(prefix);
+auto stage = usd_geospatial::open(uri);
+if (!stage) {
+    // stage.error().id() is "UGEO-E031" when no composed component provides
+    // the format; stage.error().detail("capability") names it.
+}
+```
+
+`runtime_info` reads the prefix's own composition lock, so it reports the
+runtime that is present -- its target, identities, components, and capabilities
+-- without loading OpenUSD, and can say that a prefix is not a runtime at all.
+The failure codes are listed in
+[the diagnostics reference](docs/reference/diagnostics.md), and
+[sdk/README.md](sdk/README.md) covers building, testing, and consuming it.
+`open` and `runtime_info` exist today; `inspect` and `formats` do not.
+
 ## Scope limits
 
 This release makes no Linux or macOS composition claim. Its synthetic fixtures

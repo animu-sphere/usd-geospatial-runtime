@@ -1,0 +1,5 @@
+# Text this repository compares byte for byte must keep one shape in every
+# working tree. `sdk/core/tests/test_core.cpp` asserts that the SDK serializes
+# a runtime to exactly the committed document, and a CRLF checkout would break
+# that comparison on Windows without changing anything real.
+sdk/core/tests/data/*.json text eol=lf

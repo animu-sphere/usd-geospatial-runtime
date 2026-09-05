@@ -1,0 +1,63 @@
+{
+  "schema": "usd-geospatial-runtime.runtime-info/v1",
+  "runtime": {
+    "name": "example-runtime"
+  },
+  "target": {
+    "id": "linux-x86_64-gcc13-py313",
+    "os": "linux",
+    "arch": "x86_64",
+    "toolchain": "gcc13",
+    "host_abi": "py313",
+    "usd_version": "26.08",
+    "host_python": {
+      "version": "3.13",
+      "bundled": false
+    }
+  },
+  "identity": {
+    "manifest_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "composition_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "runtime_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "components": [
+    {
+      "id": "example-asset-io",
+      "kind": "library",
+      "version": "0.1.0",
+      "artifact": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    {
+      "id": "example-usd",
+      "kind": "runtime",
+      "version": "26.08",
+      "artifact": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    {
+      "id": "example-vector-plugins",
+      "kind": "plugin",
+      "version": "0.4.2",
+      "artifact": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability": "library:example-asset-io",
+      "component": "example-asset-io",
+      "version": "0.1.0",
+      "artifact": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    {
+      "capability": "usd",
+      "component": "example-usd",
+      "version": "26.08",
+      "artifact": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    {
+      "capability": "usd-fileformat:geojson",
+      "component": "example-vector-plugins",
+      "version": "0.4.2",
+      "artifact": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "openstrata.runtime-composition-lock/v1alpha1",
+  "resolved": {
+    "name": "example-runtime",
+    "target": "windows-x86_64-msvc143-py313",
+    "manifest_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "composition_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "components": [
+      {
+        "id": "example-usd",
+        "kind": "runtime",
+        "version": "26.08",
+        "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      }
+    ],
+    "providers": [
+      {
+        "capability": "usd",
+        "component": "example-usd",
+        "version": "26.08",
+        "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      }
+    ],
+    "install": [
+      {"destination": "bin/tbb12.dll", "component": "example-usd", "source": "bin/tbb12.dll"},
+      {"destination": "python/python3.13.exe", "component": "example-usd", "source": "python3.13.exe"}
+    ]
+  },
+  "runtime_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+}
