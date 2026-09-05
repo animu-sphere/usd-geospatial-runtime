@@ -13,8 +13,10 @@ Status: proposed
 | L5 acceptance | Released artifact | Pull, verify, reconstruct, execute, and inspect from an empty environment. |
 
 Only layers backed by implemented surfaces should be added to CI. The current
-repository implements composition and artifact acceptance checks; SDK and
-binding layers remain future work.
+repository implements composition and artifact acceptance checks, and the L3
+layer for the implemented part of the SDK: its OpenUSD-free lane is tested with
+no runtime present, and `open` is tested against a composed prefix. Binding
+layers remain future work.
 
 ## Fixture policy
 

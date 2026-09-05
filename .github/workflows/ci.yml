@@ -25,3 +25,22 @@ jobs:
       - name: Test the metadata and acceptance tooling
         shell: bash
         run: python tests/tooling/test_metadata_tools.py
+
+  sdk-core:
+    # The OpenUSD-free SDK lane. It must build and test with no composed
+    # runtime anywhere on the machine, which is what makes the diagnostics,
+    # result, and introspection contracts checkable per commit. The OpenUSD
+    # lane needs a composed prefix and a toolchain matching its target, so it
+    # belongs with acceptance rather than here.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Configure the core lane
+        shell: bash
+        run: cmake -S sdk -B build/sdk-core -DUSDGEOSPATIAL_BUILD_USD=OFF -DCMAKE_BUILD_TYPE=Release
+      - name: Build the core lane
+        shell: bash
+        run: cmake --build build/sdk-core --config Release
+      - name: Test the core lane
+        shell: bash
+        run: ctest --test-dir build/sdk-core -C Release --output-on-failure

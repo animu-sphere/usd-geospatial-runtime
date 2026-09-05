@@ -62,10 +62,30 @@ changing historical release claims.
 
 ## P2: Establish the small C++ SDK
 
-- Define `Result<T>`, diagnostic codes, and `runtime_info` schema.
-- Implement `open`, then add `inspect` and `formats` only as their contracts are
-  proven by tests.
-- Test the public headers from a separate CMake consumer.
+Its first slice is in place. `Result<T>`, the published diagnostic codes, and
+the `runtime_info` schema are defined; `open` and `runtime_info` are
+implemented in two lanes under `sdk/`; and `tests/native-consumer` builds
+against the installed public headers through the exported CMake package. The
+implemented behavior is described in the
+[architecture overview](../architecture/overview.md) and the codes in the
+[diagnostics reference](../reference/diagnostics.md).
+
+- Add `formats` and `inspect`. Neither has a proven contract yet: `formats`
+  needs a decision on whether it reports composed capabilities, OpenUSD's
+  registered extensions, or the intersection, and the two differ whenever a
+  plugin fails to load. `inspect` needs a defined result before it has a shape.
+- Run the OpenUSD lane in CI. The core lane already builds and tests per
+  commit; the OpenUSD lane needs a composed prefix and a toolchain matching the
+  target, so it belongs with acceptance rather than with the per-commit checks
+  and has no runner yet.
+- Decide how the SDK is delivered. It is currently built from source against a
+  prefix. Publishing it as an OpenStrata component would let a consumer acquire
+  it the way every other component is acquired, and would let `runtime_info`
+  discover its own prefix rather than being told one.
+- Cover the failure paths the current tests cannot reach: `stage_open_failed`
+  needs a malformed asset of a composed format, and
+  `runtime_metadata_unreadable` needs an unreadable file rather than a
+  malformed string.
 
 Completion means a native consumer can open a supported asset, inspect runtime
 identity, and handle failures without parsing message text.

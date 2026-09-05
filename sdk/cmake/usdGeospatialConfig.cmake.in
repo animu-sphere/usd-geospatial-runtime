@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# The USD lane's public header includes pxr/usd/usd/stage.h and its interface
+# links the OpenUSD libraries, so a consumer cannot use this package without
+# resolving OpenUSD first. Requiring it here means the consumer gets one clear
+# find_package failure instead of a missing-header error.
+find_dependency(usdGeospatialCore @PROJECT_VERSION@ EXACT)
+find_dependency(pxr)
+
+include("${CMAKE_CURRENT_LIST_DIR}/usdGeospatialTargets.cmake")
+check_required_components(usdGeospatial)

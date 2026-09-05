@@ -39,5 +39,6 @@ being changed, and then consult the [current priorities](roadmap/current.md).
 - [Release records](releases/) are immutable historical summaries. Correct a
   factual error explicitly rather than silently rewriting release history.
 
-Guides and API reference will be added when the repository contains an
-implemented end-user SDK or binding that gives those categories real content.
+The C++ SDK's own build, test, and consumption instructions live next to it in
+[sdk/README.md](../sdk/README.md). Guides and a generated API reference will be
+added when an implemented end-user binding gives those categories real content.

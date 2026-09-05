@@ -1,0 +1,143 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// usdGeospatial open() tests.
+//
+// These need a loaded runtime, so they run inside a composed prefix -- see
+// sdk/README.md. Like the core tests they use no framework: a failed check
+// aborts, which is what CTest reads.
+//
+// argv[1] is the composed runtime prefix and argv[2] is a readable point-cloud
+// fixture; CMake passes both.
+
+#include <usd_geospatial/open.h>
+#include <usd_geospatial/runtime_info.h>
+
+#include <pxr/usd/usd/prim.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+
+namespace {
+
+int g_checks = 0;
+
+void Check(bool condition, const char* what) {
+    ++g_checks;
+    if (!condition) {
+        std::fprintf(stderr, "FAILED: %s\n", what);
+        std::abort();
+    }
+}
+
+#define CHECK(expr) Check((expr), #expr)
+
+using namespace usd_geospatial;
+
+void report(const char* label, const Diagnostic& diagnostic) {
+    std::printf("%s -> %s\n", label, diagnostic.to_json().c_str());
+}
+
+/// Nothing is attempted for an argument that cannot name an asset, and the
+/// caller is told which of the two reasons applied.
+void test_rejects_unusable_arguments() {
+    Result<pxr::UsdStageRefPtr> empty = open("");
+    CHECK(!empty.ok());
+    CHECK(empty.error().code() == DiagnosticCode::invalid_argument);
+
+    Result<pxr::UsdStageRefPtr> bare = open("a-name-with-no-extension");
+    CHECK(!bare.ok());
+    CHECK(bare.error().code() == DiagnosticCode::invalid_argument);
+    report("no extension", bare.error());
+}
+
+/// A scheme no composed resolver claims is its own condition, separate from
+/// "the asset is missing": nothing was ever asked to fetch it.
+void test_reports_an_unhandled_scheme() {
+    Result<pxr::UsdStageRefPtr> result = open("ftp://example.invalid/site.usda");
+    CHECK(!result.ok());
+    CHECK(result.error().code() == DiagnosticCode::unsupported_uri_scheme);
+    CHECK(result.error().detail("scheme") == "ftp");
+    // The composition provides the HTTP resolver, so its schemes are the
+    // evidence that the registered list is real and not empty.
+    CHECK(result.error().detail("registered").find("http") != std::string::npos);
+    report("unhandled scheme", result.error());
+}
+
+/// A missing format is reported as the capability a composition would have to
+/// add, using the same capability name the manifest and metadata use. GeoJSON
+/// is the honest example: docs/roadmap/current.md has it as pending work, so
+/// this composition genuinely cannot open one.
+void test_reports_a_missing_capability() {
+    Result<pxr::UsdStageRefPtr> result = open("boundaries.geojson");
+    CHECK(!result.ok());
+    CHECK(result.error().code() == DiagnosticCode::capability_unavailable);
+    CHECK(result.error().detail("extension") == "geojson");
+    CHECK(result.error().detail("capability") == "usd-fileformat:geojson");
+    report("missing capability", result.error());
+}
+
+/// A format that is installed but an asset that is not present is a different
+/// condition again, and the one a caller retries or reports as a bad path.
+void test_reports_a_missing_asset() {
+    Result<pxr::UsdStageRefPtr> result = open("no-such-asset-8f31c2.usda");
+    CHECK(!result.ok());
+    CHECK(result.error().code() == DiagnosticCode::asset_not_found);
+    report("missing asset", result.error());
+}
+
+void test_opens_a_composed_format(const std::string& fixture) {
+    Result<pxr::UsdStageRefPtr> result = open(fixture);
+    if (!result.ok()) {
+        std::fprintf(stderr, "FAILED: %s\n", result.error().to_json().c_str());
+        std::abort();
+    }
+    // The value is an ordinary OpenUSD stage, not a wrapper: the SDK adds a
+    // typed failure path and gets out of the way on success.
+    const pxr::UsdStageRefPtr stage = result.take();
+    CHECK(static_cast<bool>(stage));
+    CHECK(static_cast<bool>(stage->GetPseudoRoot()));
+}
+
+/// The runtime describes itself from the prefix that is actually present, and
+/// the capability it reports is the one open() just used.
+void test_runtime_info_matches_the_prefix(const std::string& prefix) {
+    Result<RuntimeInfo> result = runtime_info(prefix);
+    if (!result.ok()) {
+        std::fprintf(stderr, "FAILED: %s\n", result.error().to_json().c_str());
+        std::abort();
+    }
+    const RuntimeInfo& info = result.value();
+    // The target is asserted by shape, not by value, so this test stays true
+    // when a second target is composed.
+    const Target& target = info.target();
+    CHECK(info.name() == "usd-geospatial-runtime");
+    CHECK(target.id == target.os + "-" + target.arch + "-" + target.toolchain + "-" + target.host_abi);
+    CHECK(!target.usd_version.empty());
+    CHECK(info.has_capability("usd"));
+    CHECK(info.has_capability("usd-fileformat:copc"));
+    CHECK(!info.has_capability("usd-fileformat:geojson"));
+    CHECK(info.identity().runtime_digest.rfind("sha256:", 0) == 0);
+    std::printf("%s\n", info.to_json().c_str());
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    if (argc < 3) {
+        std::fprintf(stderr, "usage: %s <runtime prefix> <point cloud fixture>\n", argv[0]);
+        return 2;
+    }
+    const std::string prefix = argv[1];
+    const std::string fixture = argv[2];
+
+    test_rejects_unusable_arguments();
+    test_reports_an_unhandled_scheme();
+    test_reports_a_missing_capability();
+    test_reports_a_missing_asset();
+    test_opens_a_composed_format(fixture);
+    test_runtime_info_matches_the_prefix(prefix);
+
+    std::printf("usdGeospatial: %d checks passed\n", g_checks);
+    return 0;
+}

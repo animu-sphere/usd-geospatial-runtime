@@ -2,7 +2,11 @@
 
 Status: proposed
 
-No API on this page is implemented yet.
+`open` and `runtime_info` are implemented for C++; see the
+[architecture overview](../architecture/overview.md) for what that covers and
+[sdk/README.md](../../sdk/README.md) for how to build it. Everything else on
+this page -- `inspect`, `formats`, and every binding -- is intent, not
+implementation.
 
 ## Initial C++ surface
 
@@ -22,16 +26,17 @@ one, rather than introducing a second scene graph.
 
 ## Results and diagnostics
 
-Failures should carry:
+Failures carry:
 
 - a stable diagnostic code such as `UGEO-E014`;
 - a category and human-readable message;
 - the originating subsystem; and
 - optional structured details such as a missing capability.
 
-Message text is not an automation contract. C++ should use an explicit
-`Result<T>`-style value, and language bindings should preserve the same code and
-details through idiomatic errors or exceptions.
+Message text is not an automation contract. C++ uses an explicit `Result<T>`
+value, and language bindings should preserve the same code and details through
+idiomatic errors or exceptions. The published codes are listed in the
+[diagnostics reference](../reference/diagnostics.md).
 
 ## Introspection
 
@@ -39,6 +44,14 @@ details through idiomatic errors or exceptions.
 active target, runtime identity, component versions, and available
 capabilities. Equivalent input should produce stable field names and diagnostic
 shapes so scripts and AI tools do not need to scrape display text.
+
+`runtime_info()` does this today, against `schemas/runtime-info.v1.json`. It
+reads the materialized prefix rather than asking OpenUSD, so it can describe a
+runtime -- or report that there is none -- before any OpenUSD library loads.
+`formats()` does not exist yet: it must first be decided whether it reports the
+capabilities the composition resolved, the extensions OpenUSD actually
+registered, or the intersection, because those differ exactly when a plugin
+fails to load, which is when the answer matters most.
 
 ## Python
 
