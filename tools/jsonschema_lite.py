@@ -63,14 +63,43 @@ def _resolve(pointer, root):
     return node
 
 
+def _same(left, right):
+    """Compare like JSON, where `true` is not 1 and `false` is not 0."""
+    if isinstance(left, bool) != isinstance(right, bool):
+        return False
+    return left == right
+
+
+def check_schema(schema, path="$"):
+    """Raise `SchemaError` for any keyword this module does not implement.
+
+    The whole schema is walked, including branches no instance reaches, so an
+    unsupported keyword cannot hide behind an absent optional property.
+    """
+    if isinstance(schema, bool):
+        return
+    if not isinstance(schema, dict):
+        raise SchemaError(f"{path}: a schema must be an object or a boolean")
+    unknown = set(schema) - SUPPORTED - ANNOTATIONS
+    if unknown:
+        raise SchemaError(f"{path}: unsupported keywords {sorted(unknown)}")
+    for name, subschema in schema.get("properties", {}).items():
+        check_schema(subschema, f"{path}.properties.{name}")
+    for name, subschema in schema.get("$defs", {}).items():
+        check_schema(subschema, f"{path}.$defs.{name}")
+    for keyword in ("items", "additionalProperties"):
+        if keyword in schema:
+            check_schema(schema[keyword], f"{path}.{keyword}")
+    for keyword in ("allOf", "oneOf"):
+        for index, branch in enumerate(schema.get(keyword, [])):
+            check_schema(branch, f"{path}.{keyword}[{index}]")
+
+
 def _check(instance, schema, root, path, errors):
     if isinstance(schema, bool):
         if not schema:
             errors.append(f"{path}: value is not allowed here")
         return
-    unknown = set(schema) - SUPPORTED - ANNOTATIONS
-    if unknown:
-        raise SchemaError(f"{path}: unsupported keywords {sorted(unknown)}")
 
     if "$ref" in schema:
         _check(instance, _resolve(schema["$ref"], root), root, path, errors)
@@ -81,9 +110,9 @@ def _check(instance, schema, root, path, errors):
             errors.append(f"{path}: expected type {'|'.join(names)}")
             return
 
-    if "const" in schema and instance != schema["const"]:
+    if "const" in schema and not _same(instance, schema["const"]):
         errors.append(f"{path}: expected {schema['const']!r}")
-    if "enum" in schema and instance not in schema["enum"]:
+    if "enum" in schema and not any(_same(instance, option) for option in schema["enum"]):
         errors.append(f"{path}: expected one of {schema['enum']!r}")
 
     if isinstance(instance, str):
@@ -127,6 +156,7 @@ def _check(instance, schema, root, path, errors):
 
 def errors_for(instance, schema):
     """Return every validation error for an instance, as readable strings."""
+    check_schema(schema)
     found = []
     _check(instance, schema, schema, "$", found)
     return found

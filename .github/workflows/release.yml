@@ -35,9 +35,23 @@ jobs:
           mkdir dist-release
           git archive --format=tar.gz --prefix="usd-geospatial-runtime-${version}/" \
             -o "dist-release/usd-geospatial-runtime-${version}-src.tar.gz" "${GITHUB_REF_NAME}"
-          cp LICENSE runtime-composition.windows.toml runtime.windows.lock.json \
-            runtime-metadata.windows.json dist-release/
-          cp "evidence/v${version}-"*.json dist-release/
+          cp LICENSE dist-release/
+          cp runtime-composition.*.toml runtime.*.lock.json runtime-metadata.*.json dist-release/
+          python - "${GITHUB_REF_NAME}" <<'PY'
+          import json
+          from pathlib import Path
+          import shutil
+          import sys
+
+          tag = sys.argv[1]
+          records = [path for path in sorted(Path("evidence").glob("*.json"))
+                     if json.loads(path.read_text(encoding="utf-8")).get("release") == tag]
+          if not records:
+              raise SystemExit(f"no committed evidence record names release {tag}")
+          for path in records:
+              shutil.copy(path, Path("dist-release") / path.name)
+              print(f"included {path}")
+          PY
           cp "docs/releases/v${version}.md" dist-release/RELEASE_NOTES.md
           cd dist-release
           find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\n' \

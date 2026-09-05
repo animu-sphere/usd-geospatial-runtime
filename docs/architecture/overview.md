@@ -69,7 +69,7 @@ from the lock's install list rather than asserted.
 
 `tools/validate_metadata.py` fails when a committed document is stale, when a
 manifest and its lock disagree, when an evidence record contradicts the lock it
-claims, or when an identity published in `README.md` or a release record no
+claims or records a failed check, or when an identity published in `README.md` or a release record no
 longer matches the generated one. It needs only CPython 3.13, and CI runs it
 together with `tests/tooling/test_metadata_tools.py`.
 

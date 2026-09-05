@@ -22,8 +22,9 @@ python tests/tooling/test_metadata_tools.py
 ```
 
 Validation uses `tools/jsonschema_lite.py`, a small validator limited to the
-keyword subset these schemas use. It raises on any unsupported keyword, so a
-schema cannot silently stop being enforced. Add the keyword to that module
+keyword subset these schemas use. It walks the whole schema before validating,
+including branches no instance reaches, and raises on any unsupported keyword,
+so a schema cannot silently stop being enforced. Add the keyword to that module
 before using it in a schema.
 
 ## Versioning

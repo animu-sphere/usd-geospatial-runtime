@@ -32,7 +32,9 @@ stdout and stderr plus `summary.json`, which conforms to
 The runner refuses to write inside the immutable runtime prefix.
 
 `status` is `passed` only when `complete` is true: every required check ran,
-exited zero, and passed its derived verification. Acceptance output is
+exited zero, and passed its derived verification. A check whose probe exits zero
+but fails a derived verification records `verification: "failed"` next to its
+`exit_code`, so the report stays factual about both. Acceptance output is
 generated, is not committed, and is not a release claim on its own.
 
 ## Committed release evidence
@@ -64,7 +66,8 @@ an explicit correction, never by rewriting a published one.
 
 `tools/validate_metadata.py` runs in CI and on release tags. It checks that
 every manifest is fully pinned and matches its lock, that every evidence record
-is schema valid and consistent with the lock it claims, that the generated
+is schema valid, records no failed check, and is consistent with the lock it
+claims, that the generated
 runtime metadata is committed and current, that published identities repeated in
 prose still match, and that the acceptance runner emits a schema-valid report.
 With `--release <tag>` it also requires `VERSION`, a release record, and

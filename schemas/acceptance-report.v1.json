@@ -31,7 +31,11 @@
         "properties": {
           "status": {"$ref": "#/$defs/status"},
           "exit_code": {"type": "integer"},
-          "output": {"type": "string", "minLength": 1}
+          "output": {"type": "string", "minLength": 1},
+          "verification": {
+            "$ref": "#/$defs/status",
+            "description": "Result of the derived verification applied to a probe's output, when the check has one. A probe can exit zero and still fail its verification."
+          }
         }
       }
     },

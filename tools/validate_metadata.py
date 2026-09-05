@@ -92,14 +92,25 @@ def validate_composition(root, report):
         report.check(f"{slug}: the lock records no conflicts", not lock["resolved"]["conflicts"])
 
 
+def check_status(entry):
+    """Return the status of an evidence check in either recorded form."""
+    return entry if isinstance(entry, str) else entry.get("status")
+
+
 def validate_evidence(root, report):
     """Check every committed release-evidence record against its schema."""
     schema = load_schema(root, "release-evidence.v1.json")
     locks = {}
     for manifest_path in runtime_metadata.manifests(root):
         slug = runtime_metadata.slug_of(manifest_path)
-        lock = json.loads((root / f"runtime.{slug}.lock.json").read_text(encoding="utf-8"))
-        locks[lock["resolved"]["target"]] = lock
+        lock_path = root / f"runtime.{slug}.lock.json"
+        try:
+            lock = json.loads(lock_path.read_text(encoding="utf-8"))
+            target = lock["resolved"]["target"]
+        except (OSError, ValueError, KeyError) as error:
+            report.failed(f"{slug}: lock is readable and names a target", f"{type(error).__name__}: {error}")
+            continue
+        locks[target] = lock
 
     records = sorted((root / "evidence").glob("*.json"))
     report.check("evidence: at least one record is committed", bool(records))
@@ -110,6 +121,9 @@ def validate_evidence(root, report):
         if not report.check(f"{name}: matches release-evidence.v1", not errors, "; ".join(errors)):
             continue
         report.check(f"{name}: records a passing acceptance", record["status"] == "passed")
+        failed = sorted(check for check, entry in record["checks"].items()
+                        if check_status(entry) != "passed")
+        report.check(f"{name}: every recorded check passed", not failed, ", ".join(failed))
         report.check(f"{name}: has a release record",
                      (root / "docs/releases" / f"{record['release']}.md").is_file())
         target = record["target"]
@@ -127,8 +141,8 @@ def validate_runtime_metadata(root, report):
     schema = load_schema(root, "runtime-metadata.v1.json")
     try:
         generated = runtime_metadata.documents(root)
-    except runtime_metadata.MetadataError as error:
-        report.failed("runtime metadata: generation", str(error))
+    except (runtime_metadata.MetadataError, KeyError, OSError, ValueError) as error:
+        report.failed("runtime metadata: generation", f"{type(error).__name__}: {error}")
         return
     for path, document in generated.items():
         name = path.relative_to(root).as_posix()
@@ -176,6 +190,16 @@ def validate_acceptance_contract(root, report):
     report.check("acceptance: a passing report is schema valid", not errors, "; ".join(errors))
     report.check("acceptance: a passing report is complete",
                  passing["status"] == "passed" and passing["complete"])
+
+    verified = accept.new_report(digest, "windows-x86_64-msvc143-py313")
+    for name in accept.REQUIRED_CHECKS:
+        accept.record_check(verified, name, 0, f"{name}.json")
+    accept.record_verification(verified, "tier2", False)
+    accept.finalize(verified, ValueError("no remote range reads observed"))
+    errors = jsonschema_lite.errors_for(verified, schema)
+    report.check("acceptance: a failed verification is schema valid", not errors, "; ".join(errors))
+    report.check("acceptance: a failed verification fails its own check",
+                 verified["checks"]["tier2"]["status"] == "failed" and verified["status"] == "failed")
 
     partial = accept.new_report(digest, "windows-x86_64-msvc143-py313")
     accept.record_check(partial, accept.REQUIRED_CHECKS[0], 0, "sdk.json")

@@ -88,7 +88,12 @@ def build(root: Path, manifest_path: Path) -> dict:
     if resolved["target"] != target:
         raise MetadataError(f"lock target {resolved['target']!r} does not match manifest {target!r}")
 
-    oci_by_artifact = {item["artifact"]: item["source"].split("@", 1)[1] for item in manifest["artifacts"]}
+    oci_by_artifact = {}
+    for item in manifest["artifacts"]:
+        source = item["source"]
+        if "@sha256:" not in source:
+            raise MetadataError(f"artifact source {source!r} is not pinned by an OCI digest")
+        oci_by_artifact[item["artifact"]] = source.split("@", 1)[1]
     components = []
     for component in sorted(resolved["components"], key=lambda item: item["id"]):
         digest = component["digest"]

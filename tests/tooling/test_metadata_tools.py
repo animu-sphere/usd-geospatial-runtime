@@ -13,6 +13,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
+import traceback
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -73,11 +74,27 @@ def test_lite_validator_enforces_keywords():
 
 
 def test_lite_validator_rejects_unsupported_keywords():
-    try:
-        jsonschema_lite.errors_for({}, {"type": "object", "patternProperties": {}})
-    except jsonschema_lite.SchemaError:
-        return
-    raise AssertionError("an unsupported keyword was silently ignored")
+    unreached = {
+        "type": "object",
+        "properties": {"detail": {"type": "string", "maxLength": 8}},
+        "$defs": {"unused": {"type": "string", "format": "uri"}},
+    }
+    for document, reason in (
+        ({"type": "object", "patternProperties": {}}, "a keyword on the root schema"),
+        (unreached, "a keyword under a property the instance omits"),
+    ):
+        try:
+            jsonschema_lite.errors_for({}, document)
+        except jsonschema_lite.SchemaError:
+            continue
+        raise AssertionError(f"an unsupported keyword was silently ignored: {reason}")
+
+
+def test_lite_validator_separates_booleans_from_numbers():
+    document = {"properties": {"schema": {"const": 1}, "count": {"enum": [0, 1]}}}
+    assert not jsonschema_lite.errors_for({"schema": 1, "count": 0}, document)
+    rejects({"schema": True}, document, "true used where the const is 1")
+    rejects({"count": False}, document, "false used where the enum holds 0")
 
 
 def test_lite_validator_resolves_references_and_alternatives():
@@ -194,6 +211,31 @@ def test_acceptance_report_tracks_required_checks():
     accept.finalize(report, RuntimeError("tier2 verification failed"))
     assert report["status"] == "failed" and report["error"] == "tier2 verification failed"
 
+    accept.finalize(report, StopIteration())
+    assert report["error"] == "StopIteration", "an errorless exception must still name itself"
+    assert not jsonschema_lite.errors_for(report, document), "a failure report must match its schema"
+
+
+def test_acceptance_report_records_derived_verification():
+    document = schema("acceptance-report.v1.json")
+    report = accept.new_report(DIGEST, "windows-x86_64-msvc143-py313")
+    for name in accept.REQUIRED_CHECKS:
+        accept.record_check(report, name, 0, f"{name}.json")
+    accept.record_verification(report, "tier2", False)
+    accept.finalize(report, ValueError("no remote range reads observed"))
+    assert report["checks"]["tier2"] == {
+        "status": "failed", "exit_code": 0, "output": "tier2.json", "verification": "failed",
+    }, "a probe that exits zero but fails verification must say both"
+    assert report["status"] == "failed"
+    assert not jsonschema_lite.errors_for(report, document)
+
+    report.pop("error")
+    accept.record_check(report, "tier2", 0, "tier2.json")
+    accept.record_verification(report, "tier2", True)
+    accept.finalize(report)
+    assert report["checks"]["tier2"]["verification"] == "passed"
+    assert report["status"] == "passed"
+
 
 def test_tier2_verification_rejects_unstable_evidence():
     def scenario(name, **extra):
@@ -226,6 +268,28 @@ def test_tier2_verification_rejects_unstable_evidence():
         raise AssertionError(f"tier2 verification accepted {reason}")
 
 
+def test_metadata_generation_requires_digest_pinned_sources():
+    manifest = (ROOT / "runtime-composition.windows.toml").read_text(encoding="utf-8")
+    tagged = manifest.replace(
+        "oci://ghcr.io/animu-sphere/usd-raster-plugins@sha256:29bb6712a73aa422c1196cb7cbaa64403703dbeb7af64f47c5d9536c773024de",
+        "oci://ghcr.io/animu-sphere/usd-raster-plugins:0.1.0")
+    assert tagged != manifest
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        for name in COPIED:
+            destination = root / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(ROOT / name, destination)
+        (root / "runtime-composition.windows.toml").write_text(tagged, encoding="utf-8")
+        try:
+            runtime_metadata.build(root, root / "runtime-composition.windows.toml")
+        except runtime_metadata.MetadataError:
+            pass
+        else:
+            raise AssertionError("a tag-pinned source produced metadata")
+        assert run_validator(root) == 1, "a tag-pinned source must fail validation"
+
+
 def run_validator(root):
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         return validate_metadata.main(["--root", str(root)])
@@ -246,10 +310,24 @@ def test_validator_detects_committed_drift():
         assert run_validator(root) == 1, "a stale README locator must fail"
         readme.write_text(original, encoding="utf-8")
 
-        record = json.loads((root / "evidence/v0.1.0-windows.json").read_text(encoding="utf-8"))
+        evidence_path = root / "evidence/v0.1.0-windows.json"
+        original_evidence = evidence_path.read_text(encoding="utf-8")
+
+        record = json.loads(original_evidence)
         record["runtime_digest"] = DIGEST
-        (root / "evidence/v0.1.0-windows.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
+        evidence_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
         assert run_validator(root) == 1, "evidence that contradicts the lock must fail"
+
+        for check, value in (("sdk", "failed"), ("raster", {"status": "failed", "format": "tif"})):
+            record = json.loads(original_evidence)
+            record["checks"][check] = value
+            evidence_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+            assert run_validator(root) == 1, f"a failed {check} check must fail the record"
+        evidence_path.write_text(original_evidence, encoding="utf-8")
+
+        lock = root / "runtime.windows.lock.json"
+        lock.unlink()
+        assert run_validator(root) == 1, "a missing lock must fail rather than crash"
 
 
 def main():
@@ -261,6 +339,10 @@ def main():
         except AssertionError as error:
             failures += 1
             print(f"FAIL {test.__name__}: {error}")
+        except Exception:
+            failures += 1
+            print(f"ERROR {test.__name__}:")
+            traceback.print_exc()
         else:
             print(f"ok   {test.__name__}")
     if failures:

@@ -38,10 +38,18 @@ def record_check(report, name, exit_code, output):
     }
 
 
+def record_verification(report, name, passed):
+    """Record the derived verification applied to a check's probe output."""
+    check = report["checks"][name]
+    check["verification"] = "passed" if passed else "failed"
+    if not passed:
+        check["status"] = "failed"
+
+
 def finalize(report, error=None):
     """Set the terminal status from the recorded checks."""
     if error is not None:
-        report["error"] = str(error)
+        report["error"] = str(error) or type(error).__name__
     checks = report["checks"]
     passed = all(checks.get(name, {}).get("status") == "passed" for name in report["required_checks"])
     report["complete"] = bool(passed and error is None)
@@ -51,7 +59,9 @@ def finalize(report, error=None):
 
 def verify_tier2(record):
     rows = record["scenarios"]
-    local = next(row for row in rows if row["scenario"] == "full-local")
+    local = next((row for row in rows if row["scenario"] == "full-local"), None)
+    if local is None:
+        raise ValueError("the tier2 measurements contain no local COPC baseline")
     if not local.get("opened") or local.get("pointCount", 0) < 1:
         raise ValueError("local COPC baseline did not author points")
     for row in rows:
@@ -112,12 +122,13 @@ def main():
                              "--output", str(output / "tier2-measurements.json")])
         try:
             verify_tier2(json.loads((output / "tier2-measurements.json").read_text(encoding="utf-8")))
-        except (ValueError, KeyError, StopIteration):
-            report["checks"]["tier2"]["status"] = "failed"
+        except (ValueError, KeyError):
+            record_verification(report, "tier2", False)
             raise
+        record_verification(report, "tier2", True)
         run("raster", base + [str(prefix / "share/usd-raster-plugins/probes/packaged_probe.py"),
                               "--prefix", str(prefix)])
-    except (RuntimeError, ValueError, KeyError, StopIteration, OSError, subprocess.TimeoutExpired) as error:
+    except (RuntimeError, ValueError, KeyError, OSError, subprocess.TimeoutExpired) as error:
         failure = error
     finally:
         finalize(report, failure)
