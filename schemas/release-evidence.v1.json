@@ -25,6 +25,12 @@
     "composed_artifact": {"$ref": "#/$defs/digest"},
     "composed_oci_manifest": {"$ref": "#/$defs/digest"},
     "status": {"$ref": "#/$defs/status"},
+    "required_checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "description": "The acceptance checks this release required, naming the contract the record was written under. A record without the field required exactly the checks listed under `checks.required`, which is the set the first v1 release accepted and is never reduced."
+    },
     "clean_public_input_compose": {
       "type": "boolean",
       "description": "The composition was reproduced from public immutable inputs in an empty OST_HOME, without producer paths."
@@ -76,6 +82,20 @@
           "required": ["status", "format"],
           "properties": {
             "format": {"type": "string", "minLength": 1}
+          }
+        },
+        "vector": {
+          "allOf": [{"$ref": "#/$defs/check"}],
+          "type": "object",
+          "required": ["status", "format", "rejected_sources"],
+          "properties": {
+            "format": {"type": "string", "minLength": 1},
+            "feature_count": {"type": "integer", "minimum": 1},
+            "rejected_sources": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Sources the plugin refused, so the record proves detection is selective and not merely permissive."
+            }
           }
         }
       },

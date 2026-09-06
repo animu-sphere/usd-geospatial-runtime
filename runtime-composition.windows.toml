@@ -20,6 +20,8 @@ capability = "usd-fileformat:copc"
 capability = "usd-fileformat:ply"
 [[requirements]]
 capability = "usd-fileformat:tif"
+[[requirements]]
+capability = "usd-fileformat:geojson"
 
 [[artifacts]]
 artifact = "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c"
@@ -49,6 +51,10 @@ source = "oci://ghcr.io/animu-sphere/usd-pointcloud-plugins@sha256:0002805ded0c1
 artifact = "sha256:39c9d553ca60dc5d1f02e698377622d7567574c950d98a3306a010ca97819b28"
 source = "oci://ghcr.io/animu-sphere/usd-raster-plugins@sha256:29bb6712a73aa422c1196cb7cbaa64403703dbeb7af64f47c5d9536c773024de"
 
+[[artifacts]]
+artifact = "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8"
+source = "oci://ghcr.io/animu-sphere/usd-vector-plugins@sha256:acfbe867427afc4906b80e7630d69a29d45e38ec4b361b37a482d68e74a9a1cd"
+
 [providers]
 usd = "openstrata-cy2026-windows-x86_64-py313-usd"
 "usd-resolver:http" = "usd-http-resolver"
@@ -57,3 +63,4 @@ usd = "openstrata-cy2026-windows-x86_64-py313-usd"
 "usd-fileformat:copc" = "usd-pointcloud-plugins"
 "usd-fileformat:ply" = "usd-pointcloud-plugins"
 "usd-fileformat:tif" = "usd-raster-plugins"
+"usd-fileformat:geojson" = "usd-vector-plugins"

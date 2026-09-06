@@ -11,43 +11,44 @@ evidence shape are recorded in the
 generated and schema checked, and the target-aware layout is planned in the
 [composition layout design](../design/composition-layout.md).
 
-## P0: Compose the vector capability
+## P0: Release the composed vector capability
 
-The provider exists. [`usd-vector-plugins`](https://github.com/animu-sphere/usd-vector-plugins)
-v0.1.0 publishes the `vector-geojson` plugin bundle as an OpenStrata plugin
-product for `cy2026-windows-x86_64-py313-usd`. Its component manifest declares
-`usd-fileformat:geojson` and requires only `usd >=26.08,<27.0` and
-`usd-stage-read`, both of which the current composition already resolves, so no
-capability name has to be negotiated and no new requirement class is introduced.
+The capability is composed. [`usd-vector-plugins`](https://github.com/animu-sphere/usd-vector-plugins)
+v0.1.0 is pinned as an eighth candidate artifact by archive digest
+`sha256:153c20f3...` and OCI manifest digest `sha256:acfbe867...`, it provides
+`usd-fileformat:geojson`, and the recomposed target resolves to runtime
+`sha256:562444f4...`. Its packaged probe runs as the required `vector`
+acceptance check, and a local run of `tools/accept.py` passes all six checks.
 
-- Publish the product as an immutable OCI artifact. The v0.1.0 product archive
-  digest is `sha256:e89e1e520ad96d16292bc24505cbec8f9eba35165d364a5d897e5e67275fa29b`,
-  but no `oci://ghcr.io/animu-sphere/usd-vector-plugins@sha256:...` locator is
-  published yet, and this composition pins candidates by OCI digest only.
-- Confirm the runtime match before composing. The product provenance records
-  verification against OpenUSD runtime artifact `sha256:3a4e3993...`, while this
-  composition pins `sha256:51c19df2...` for the same component id. Establish
-  that the two are the same runtime, or rebuild and re-verify the product
-  against the pinned artifact.
-- Ask `usd-vector-plugins` to install an acceptance probe alongside its bundle,
-  as the point-cloud and raster products do under
-  `share/<component>/probes/`. The published product currently installs only
-  `bundles/vector-geojson/...`, and the acceptance runner must keep using
-  installed probes rather than gaining repository-specific runtime logic.
-- Add the requirement, candidate artifact, and provider mapping to
-  `runtime-composition.windows.toml`, recompose with `--locked`, and regenerate
-  `runtime-metadata.windows.json`.
-- Add a `vector` check to `tools/accept.py`, to the
-  [acceptance contract](../reference/acceptance-contract.md), and to the
-  required checks in `schemas/release-evidence.v1.json`. The product ships
-  `bundles/vector-geojson/tests/fixtures/basic.geojson`, so this repository
-  commits a fixture only if the probe needs a repository-owned input.
-- Publish a release record containing exact input and output identities, and
-  add the capability row to the [support matrix](../reference/support-matrix.md).
+The three concerns this item opened with are closed. The product is published as
+an immutable OCI artifact. The runtime match is established by identity rather
+than by argument: `usd-vector-plugins`, `usd-pointcloud-plugins`, and
+`usd-http-resolver` all record the same runtime digest
+`sha256:3a4e3993...` in their `strata.lock`, and the latter two are already
+composed here. The product now installs its probe under
+`share/usd-vector-plugins/probes/`, like the point-cloud and raster products, so
+the acceptance runner still uses only installed probes.
 
-Completion means the reconstructed artifact opens a GeoJSON asset through
-capability discovery, and its release evidence records a passing `vector` check
-next to the existing ones.
+What remains is the release, which is the only step that can turn the
+composition into a support claim:
+
+- Push the composed runtime to
+  `oci://ghcr.io/animu-sphere/usd-geospatial-runtime` and record the composed
+  artifact and OCI manifest digests.
+- Reproduce the composition from public inputs in an empty `OST_HOME`, then pull,
+  verify, and reconstruct the published artifact and re-run acceptance against
+  it.
+- Commit `evidence/v0.2.0-windows.json` with `required_checks` naming the six
+  current checks, write `docs/releases/v0.2.0.md`, bump `VERSION`, regenerate
+  `runtime-metadata.windows.json`, and update the identities the README
+  publishes.
+- Move `usd-fileformat:geojson` into the
+  [support matrix](../reference/support-matrix.md) capability table.
+
+Until then `tools/runtime_metadata.py` reports the target as awaiting release
+acceptance and leaves the committed document describing v0.1.0, and
+`tools/validate_metadata.py --release` refuses a tag whose evidence does not
+accept the committed composition.
 
 ## P1: Introduce target-aware composition layout
 
