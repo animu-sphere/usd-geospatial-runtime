@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 CONTRACT = "usd-geospatial-runtime.acceptance/v1"
-REQUIRED_CHECKS = ("sdk", "http", "pointcloud", "tier2", "raster", "vector")
+REQUIRED_CHECKS = ("sdk", "http", "pointcloud", "tier2", "raster")
 
 
 def new_report(runtime_digest, target=None):
@@ -127,8 +127,6 @@ def main():
             raise
         record_verification(report, "tier2", True)
         run("raster", base + [str(prefix / "share/usd-raster-plugins/probes/packaged_probe.py"),
-                              "--prefix", str(prefix)])
-        run("vector", base + [str(prefix / "share/usd-vector-plugins/probes/packaged_probe.py"),
                               "--prefix", str(prefix)])
     except (RuntimeError, ValueError, KeyError, OSError, subprocess.TimeoutExpired) as error:
         failure = error

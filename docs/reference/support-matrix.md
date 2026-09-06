@@ -29,10 +29,7 @@ manifest, lock, and accepted evidence and committed next to them; today that is
 | `usd-fileformat:ply` | `usd-pointcloud-plugins` | Packaged probe open |
 | `usd-fileformat:tif` | `usd-raster-plugins` | GeoTIFF metadata authoring |
 
-`usd-fileformat:geojson` is composed and provided by `usd-vector-plugins`, and
-its packaged probe passes, but it carries no release evidence yet and so is not
-in the table above. It becomes a support claim when a release records a passing
-`vector` check.
+Vector formats are not part of the current composition.
 
 ## Distribution properties
 

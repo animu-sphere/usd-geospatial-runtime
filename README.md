@@ -5,9 +5,9 @@ point-cloud FileFormat plugins, and the GeoTIFF FileFormat plugin.
 
 ## v0.1.0
 
-The first release targets Windows x86_64, MSVC 14.3, and host Python 3.13. It
-pinned seven independently published component artifacts by both their
-OpenStrata archive digest and OCI manifest digest.
+The first release targets Windows x86_64, MSVC 14.3, and host Python 3.13. The
+composition manifest and lock pin seven independently published component
+artifacts by both their OpenStrata archive digest and OCI manifest digest.
 
 - Runtime identity: `sha256:904b8c12be5668fde17eda3f49c22b5cc30a253a5ffd3cf851d136ea7457f6bc`
 - Composed artifact: `sha256:e0bc2fb1c6da23e8e3c722eefd6e6b0623aa7c0d0679e41e30a82152e61e1c62`
@@ -16,16 +16,6 @@ OpenStrata archive digest and OCI manifest digest.
 The composed artifact carries an SPDX SBOM and in-toto provenance. A pull into
 an empty OST registry verified the OCI digest, archive digest, file inventory,
 SBOM, provenance, archive safety, and artifact kind before reconstruction.
-
-## Unreleased
-
-The committed manifest and lock are ahead of v0.1.0: they pin an eighth
-component, `usd-vector-plugins` 0.1.0, which provides `usd-fileformat:geojson`,
-and resolve runtime
-`sha256:562444f47821138f9f92b9f657832624ecee98bd7154021078b3fc198fb1c2f8`.
-Acceptance passes against that composition, but nothing is published for it, so
-the identities above remain the only released ones. The commands below therefore
-reproduce the unreleased composition; reproduce v0.1.0 from the `v0.1.0` tag.
 
 ## Reproduce the composition
 
@@ -52,8 +42,8 @@ ost runtime reconstruct `
 
 The acceptance runner uses only probes installed in the composition. It checks
 the SDK, HTTP cold/warm cache behavior, LAS/LAZ/PLY/COPC reads, ten HTTP/COPC
-validator scenarios, GeoTIFF metadata authoring, and GeoJSON reads and
-refusals. Python 3.13 is an explicit host prerequisite and is not bundled.
+validator scenarios, and GeoTIFF metadata authoring. Python 3.13 is an explicit
+host prerequisite and is not bundled.
 
 ## Inspect and validate
 

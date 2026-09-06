@@ -334,46 +334,13 @@ def test_release_evidence_schema_rejects_incomplete_records():
     rejects(record, document, "an undeclared top-level property")
 
     record = evidence()
-    record["checks"]["mesh"] = "passed"
-    assert not jsonschema_lite.errors_for(record, document), "an extra capability check must be allowed"
-
-    record = evidence()
     record["checks"]["vector"] = "passed"
-    rejects(record, document, "a declared check recorded without its measurements")
-
-    record = evidence()
-    record["checks"]["vector"] = {"status": "passed", "format": "geojson", "rejected_sources": 2}
-    assert not jsonschema_lite.errors_for(record, document), "a measured vector check must be allowed"
-
-    record = evidence()
-    record["checks"]["vector"] = {"status": "passed", "format": "geojson", "rejected_sources": 0}
-    rejects(record, document, "a vector check that refused nothing")
-
-    record = evidence()
-    record["required_checks"] = ["sdk", "http", "pointcloud", "tier2", "raster", "vector"]
-    assert not jsonschema_lite.errors_for(record, document), "a record may name its own contract"
-
-    record = evidence()
-    record["required_checks"] = []
-    rejects(record, document, "a record that requires no check at all")
-
-
-def test_runtime_metadata_generation_tracks_the_accepted_release():
-    lock = json.loads((ROOT / "runtime.windows.lock.json").read_text(encoding="utf-8"))
-    committed = json.loads((ROOT / "runtime-metadata.windows.json").read_text(encoding="utf-8"))
-    try:
-        generated = runtime_metadata.build(ROOT, ROOT / "runtime-composition.windows.toml")
-    except runtime_metadata.PendingReleaseError as error:
-        assert lock["runtime_digest"] in str(error), "a pending release must name the runtime it awaits"
-        assert committed["identity"]["runtime_digest"] != lock["runtime_digest"]
-        return
-    assert generated == committed, "a released composition must regenerate its committed document"
-    assert generated["identity"]["runtime_digest"] == lock["runtime_digest"]
+    assert not jsonschema_lite.errors_for(record, document), "an extra capability check must be allowed"
 
 
 def test_runtime_metadata_schema_rejects_tampered_documents():
     document = schema("runtime-metadata.v1.json")
-    generated = json.loads((ROOT / "runtime-metadata.windows.json").read_text(encoding="utf-8"))
+    generated = runtime_metadata.build(ROOT, ROOT / "runtime-composition.windows.toml")
     assert not jsonschema_lite.errors_for(generated, document)
 
     tampered = copy.deepcopy(generated)
@@ -422,13 +389,12 @@ def test_acceptance_report_tracks_required_checks():
     assert not jsonschema_lite.errors_for(report, document)
     assert report["status"] == "failed" and not report["complete"], "a missing check must fail the report"
 
-    last = accept.REQUIRED_CHECKS[-1]
-    accept.record_check(report, last, 1, f"{last}.json")
+    accept.record_check(report, accept.REQUIRED_CHECKS[-1], 1, "raster.json")
     accept.finalize(report)
-    assert report["checks"][last]["status"] == "failed"
+    assert report["checks"]["raster"]["status"] == "failed"
     assert report["status"] == "failed"
 
-    accept.record_check(report, last, 0, f"{last}.json")
+    accept.record_check(report, accept.REQUIRED_CHECKS[-1], 0, "raster.json")
     accept.finalize(report)
     assert report["status"] == "passed" and report["complete"]
     assert not jsonschema_lite.errors_for(report, document)

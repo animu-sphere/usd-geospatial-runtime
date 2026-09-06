@@ -5,14 +5,12 @@
 The repository currently publishes one immutable OpenStrata composition for
 `windows-x86_64-msvc143-py313`. It combines OpenUSD 26.08, an HTTP resolver and
 its asset I/O/cache dependencies, point-cloud FileFormat plugins for LAS, LAZ,
-COPC, and PLY, a raster FileFormat plugin for GeoTIFF, and a vector FileFormat
-plugin for GeoJSON. The vector capability is composed and accepted locally but
-is not yet part of a published release.
+COPC, and PLY, and a raster FileFormat plugin for GeoTIFF.
 
 It also implements most of the `usd_geospatial` C++ SDK: the failure
 vocabulary, `Result<T>`, `runtime_info`, `open`, and `formats`. The repository
 does not yet implement the `inspect` operation, a Python package, a Node
-package, a Wasm module, or a Linux/macOS composition.
+package, a Wasm module, a vector provider, or a Linux/macOS composition.
 
 ## Repository surfaces
 

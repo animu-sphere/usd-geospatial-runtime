@@ -15,9 +15,6 @@
         "capability": "usd-fileformat:copc"
       },
       {
-        "capability": "usd-fileformat:geojson"
-      },
-      {
         "capability": "usd-fileformat:las"
       },
       {
@@ -35,10 +32,6 @@
       }
     ],
     "artifacts": [
-      {
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "oci://ghcr.io/animu-sphere/usd-vector-plugins@sha256:acfbe867427afc4906b80e7630d69a29d45e38ec4b361b37a482d68e74a9a1cd"
-      },
       {
         "artifact": "sha256:2f9887eff977d1a800b23a0a0c35d578097c465535a933aa407f31644ee064c8",
         "source": "oci://ghcr.io/animu-sphere/usd-http-resolver@sha256:2622f2ba04f01b530a447644271b23242dcbf4c4f37f986ade0d517da6a38540"
@@ -71,7 +64,6 @@
     "providers": {
       "usd": "openstrata-cy2026-windows-x86_64-py313-usd",
       "usd-fileformat:copc": "usd-pointcloud-plugins",
-      "usd-fileformat:geojson": "usd-vector-plugins",
       "usd-fileformat:las": "usd-pointcloud-plugins",
       "usd-fileformat:laz": "usd-pointcloud-plugins",
       "usd-fileformat:ply": "usd-pointcloud-plugins",
@@ -83,8 +75,8 @@
     "schema": "openstrata.runtime-composition-resolved/v1alpha1",
     "name": "usd-geospatial-runtime",
     "target": "windows-x86_64-msvc143-py313",
-    "manifest_digest": "sha256:58efd977a4970393d220172fa0eea863e2ee0d10e68e19c717fdd4bc3e4303a5",
-    "composition_digest": "sha256:c367e50b56cca6d1fd69334bdaa51bebfb5f9a5874ddb98079792786bf2b6fe8",
+    "manifest_digest": "sha256:016f5a30c926fb2760c3d43fa7bf8175ec682d844c69ee8fae7ef98946a43f17",
+    "composition_digest": "sha256:e31e4cfa66b544a9f369af31749ee2cbd1761923ea9d8b62cfa5e456e1ca0d41",
     "components": [
       {
         "id": "openstrata-cy2026-windows-x86_64-py313-usd",
@@ -105,13 +97,6 @@
         "kind": "plugin",
         "version": "0.1.0",
         "digest": "sha256:39c9d553ca60dc5d1f02e698377622d7567574c950d98a3306a010ca97819b28",
-        "target": "cy2026-windows-x86_64-py313-usd"
-      },
-      {
-        "id": "usd-vector-plugins",
-        "kind": "plugin",
-        "version": "0.1.0",
-        "digest": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
         "target": "cy2026-windows-x86_64-py313-usd"
       },
       {
@@ -173,12 +158,6 @@
         "component": "usd-pointcloud-plugins",
         "version": "0.11.0",
         "digest": "sha256:9954ff6788ae1987203bd05e8753c8265523cbad65c2f0a802bbfadb05bbef9e"
-      },
-      {
-        "capability": "usd-fileformat:geojson",
-        "component": "usd-vector-plugins",
-        "version": "0.1.0",
-        "digest": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8"
       },
       {
         "capability": "usd-fileformat:las",
@@ -325,14 +304,6 @@
       {
         "variable": "PATH",
         "operation": "prepend",
-        "source": "usd-vector-plugins",
-        "values": [
-          "bundles/vector-geojson/lib"
-        ]
-      },
-      {
-        "variable": "PATH",
-        "operation": "prepend",
         "source": "usdAssetCache",
         "values": [
           "lib"
@@ -408,14 +379,6 @@
         "source": "usd-raster-plugins",
         "values": [
           "bundles/raster-geotiff/plugin/resources/raster-geotiff"
-        ]
-      },
-      {
-        "variable": "PXR_PLUGINPATH_NAME",
-        "operation": "prepend",
-        "source": "usd-vector-plugins",
-        "values": [
-          "bundles/vector-geojson/plugin/resources/vector-geojson"
         ]
       }
     ],
@@ -1331,114 +1294,6 @@
         "component": "usd-raster-plugins",
         "artifact": "sha256:39c9d553ca60dc5d1f02e698377622d7567574c950d98a3306a010ca97819b28",
         "source": "bundles/raster-geotiff/validation/report.json"
-      },
-      {
-        "destination": "bundles/vector-geojson/activate.ps1",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/activate.ps1"
-      },
-      {
-        "destination": "bundles/vector-geojson/activate.sh",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/activate.sh"
-      },
-      {
-        "destination": "bundles/vector-geojson/lib/libUsdVectorGeoJsonFileFormat.dll",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/lib/libUsdVectorGeoJsonFileFormat.dll"
-      },
-      {
-        "destination": "bundles/vector-geojson/openstrata.activation.json",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/openstrata.activation.json"
-      },
-      {
-        "destination": "bundles/vector-geojson/openstrata.plugin.yaml",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/openstrata.plugin.yaml"
-      },
-      {
-        "destination": "bundles/vector-geojson/openstrata.scaffold.yaml",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/openstrata.scaffold.yaml"
-      },
-      {
-        "destination": "bundles/vector-geojson/openstrata.verification.json",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/openstrata.verification.json"
-      },
-      {
-        "destination": "bundles/vector-geojson/openstrata_activate.py",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/openstrata_activate.py"
-      },
-      {
-        "destination": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json"
-      },
-      {
-        "destination": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json.in",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json.in"
-      },
-      {
-        "destination": "bundles/vector-geojson/tests/fixtures/basic.geojson",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/tests/fixtures/basic.geojson"
-      },
-      {
-        "destination": "bundles/vector-geojson/tests/fixtures/basic.geojson.golden.usda",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/tests/fixtures/basic.geojson.golden.usda"
-      },
-      {
-        "destination": "bundles/vector-geojson/tests/fixtures/basic.json",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/tests/fixtures/basic.json"
-      },
-      {
-        "destination": "bundles/vector-geojson/tests/fixtures/basic.json.golden.usda",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/tests/fixtures/basic.json.golden.usda"
-      },
-      {
-        "destination": "bundles/vector-geojson/tests/fixtures/invalid.geojson",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/tests/fixtures/invalid.geojson"
-      },
-      {
-        "destination": "bundles/vector-geojson/tests/fixtures/unrelated.json",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/tests/fixtures/unrelated.json"
-      },
-      {
-        "destination": "bundles/vector-geojson/validation/environment.json",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/validation/environment.json"
-      },
-      {
-        "destination": "bundles/vector-geojson/validation/report.json",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "bundles/vector-geojson/validation/report.json"
       },
       {
         "destination": "cmake/pxrTargets-release.cmake",
@@ -26071,18 +25926,6 @@
         "source": "data/0000/packaged_probe.py"
       },
       {
-        "destination": "share/usd-vector-plugins/probes/__pycache__/packaged_probe.cpython-313.pyc",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "data/0000/__pycache__/packaged_probe.cpython-313.pyc"
-      },
-      {
-        "destination": "share/usd-vector-plugins/probes/packaged_probe.py",
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "data/0000/packaged_probe.py"
-      },
-      {
         "destination": "share/usd/examples/bin/usdMakeFileVariantModelAsset",
         "component": "openstrata-cy2026-windows-x86_64-py313-usd",
         "artifact": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c",
@@ -26374,173 +26217,6 @@
     "conflicts": []
   },
   "artifacts": [
-    {
-      "manifest_digest": "sha256:0819e1e223f1b1cf076dae4d198e0a62d30407f8c972b7fa4725649e77fd0a27",
-      "record": {
-        "schema": 1,
-        "kind": "product",
-        "name": "usd-vector-plugins",
-        "version": "0.1.0",
-        "target": "cy2026-windows-x86_64-py313-usd",
-        "profile": "usd",
-        "digest": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "archive": "usd-vector-plugins-0.1.0-cy2026-windows-x86_64-py313-usd-plugin-product.tar.zst",
-        "archive_size": 3178415,
-        "total_size": 3532039,
-        "file_count": 26,
-        "created_unix": 0,
-        "producer": "ost 0.22.8",
-        "imported_by": "",
-        "source": "imported",
-        "trust": "local",
-        "validation": "passed",
-        "licenses": [
-          "Apache-2.0"
-        ],
-        "sbom": "sbom.spdx.json",
-        "sbom_digest": "sha256:385b1262c92afadaecdebe601a67b8e8476d4b73cf837a6b2c40b0f85abeb7f1",
-        "sbom_size": 14597,
-        "runtime_id": "openstrata-cy2026-windows-x86_64-py313-usd",
-        "runtime_digest": "sha256:ce9964320b5ab83b6f124b307af419340d342f6741fdf5fd1964e712243727a1",
-        "component": {
-          "schema": "openstrata.component/v1alpha1",
-          "id": "usd-vector-plugins",
-          "kind": "plugin",
-          "version": "0.1.0",
-          "provides": [
-            {
-              "capability": "component:usd-vector-plugins",
-              "version": "0.1.0",
-              "singleton": true
-            },
-            {
-              "capability": "component:vector-geojson",
-              "version": "0.1.0",
-              "singleton": true
-            },
-            {
-              "capability": "usd-fileformat:geojson",
-              "version": "0.1.0",
-              "singleton": true
-            }
-          ],
-          "requires": [
-            {
-              "capability": "usd",
-              "version": ">=26.08,<27.0"
-            },
-            {
-              "capability": "usd-stage-read"
-            }
-          ],
-          "environment": [
-            {
-              "variable": "PXR_PLUGINPATH_NAME",
-              "operation": "prepend",
-              "values": [
-                "bundles/vector-geojson/plugin/resources/vector-geojson"
-              ]
-            },
-            {
-              "variable": "PATH",
-              "operation": "prepend",
-              "values": [
-                "bundles/vector-geojson/lib"
-              ]
-            }
-          ],
-          "install": [
-            {
-              "source": "bundles/vector-geojson/activate.ps1",
-              "destination": "bundles/vector-geojson/activate.ps1"
-            },
-            {
-              "source": "bundles/vector-geojson/activate.sh",
-              "destination": "bundles/vector-geojson/activate.sh"
-            },
-            {
-              "source": "bundles/vector-geojson/lib/libUsdVectorGeoJsonFileFormat.dll",
-              "destination": "bundles/vector-geojson/lib/libUsdVectorGeoJsonFileFormat.dll"
-            },
-            {
-              "source": "bundles/vector-geojson/openstrata.activation.json",
-              "destination": "bundles/vector-geojson/openstrata.activation.json"
-            },
-            {
-              "source": "bundles/vector-geojson/openstrata.plugin.yaml",
-              "destination": "bundles/vector-geojson/openstrata.plugin.yaml"
-            },
-            {
-              "source": "bundles/vector-geojson/openstrata.scaffold.yaml",
-              "destination": "bundles/vector-geojson/openstrata.scaffold.yaml"
-            },
-            {
-              "source": "bundles/vector-geojson/openstrata.verification.json",
-              "destination": "bundles/vector-geojson/openstrata.verification.json"
-            },
-            {
-              "source": "bundles/vector-geojson/openstrata_activate.py",
-              "destination": "bundles/vector-geojson/openstrata_activate.py"
-            },
-            {
-              "source": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json",
-              "destination": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json"
-            },
-            {
-              "source": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json.in",
-              "destination": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json.in"
-            },
-            {
-              "source": "bundles/vector-geojson/tests/fixtures/basic.geojson",
-              "destination": "bundles/vector-geojson/tests/fixtures/basic.geojson"
-            },
-            {
-              "source": "bundles/vector-geojson/tests/fixtures/basic.geojson.golden.usda",
-              "destination": "bundles/vector-geojson/tests/fixtures/basic.geojson.golden.usda"
-            },
-            {
-              "source": "bundles/vector-geojson/tests/fixtures/basic.json",
-              "destination": "bundles/vector-geojson/tests/fixtures/basic.json"
-            },
-            {
-              "source": "bundles/vector-geojson/tests/fixtures/basic.json.golden.usda",
-              "destination": "bundles/vector-geojson/tests/fixtures/basic.json.golden.usda"
-            },
-            {
-              "source": "bundles/vector-geojson/tests/fixtures/invalid.geojson",
-              "destination": "bundles/vector-geojson/tests/fixtures/invalid.geojson"
-            },
-            {
-              "source": "bundles/vector-geojson/tests/fixtures/unrelated.json",
-              "destination": "bundles/vector-geojson/tests/fixtures/unrelated.json"
-            },
-            {
-              "source": "bundles/vector-geojson/validation/environment.json",
-              "destination": "bundles/vector-geojson/validation/environment.json"
-            },
-            {
-              "source": "bundles/vector-geojson/validation/report.json",
-              "destination": "bundles/vector-geojson/validation/report.json"
-            },
-            {
-              "source": "data/0000/__pycache__/packaged_probe.cpython-313.pyc",
-              "destination": "share/usd-vector-plugins/probes/__pycache__/packaged_probe.cpython-313.pyc"
-            },
-            {
-              "source": "data/0000/packaged_probe.py",
-              "destination": "share/usd-vector-plugins/probes/packaged_probe.py"
-            }
-          ],
-          "compatibility": {
-            "targets": [
-              "windows-x86_64-msvc143-py313"
-            ],
-            "abi": "msvc143",
-            "openusd": ">=26.08,<27.0"
-          }
-        }
-      }
-    },
     {
       "manifest_digest": "sha256:22f12c1e4864b975614fd3e955c0cbf615b84959e6ac1e5f3105dc3e3982f27d",
       "record": {
@@ -44629,18 +44305,6 @@
     },
     {
       "consumer": "usd-raster-plugins",
-      "capability": "usd-stage-read",
-      "provider": "openstrata-cy2026-windows-x86_64-py313-usd",
-      "digest": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c"
-    },
-    {
-      "consumer": "usd-vector-plugins",
-      "capability": "usd",
-      "provider": "openstrata-cy2026-windows-x86_64-py313-usd",
-      "digest": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c"
-    },
-    {
-      "consumer": "usd-vector-plugins",
       "capability": "usd-stage-read",
       "provider": "openstrata-cy2026-windows-x86_64-py313-usd",
       "digest": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c"
@@ -83414,240 +83078,6 @@
       }
     },
     {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/activate.ps1",
-        "sha256": "sha256:bff9261074990dca12109a124dfb2f685e0314c6c1874911af157225f5ead80b",
-        "size": 851
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/activate.sh",
-        "sha256": "sha256:7c9f23912a8508273f0c462d41a6c619c4a781d52307a4be08fb2b378b8a111f",
-        "size": 646
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/lib/libUsdVectorGeoJsonFileFormat.dll",
-        "sha256": "sha256:29e172eae29ed8716cef1f721d1bfc97b1840aa81bbac28aa951a6c82c86392a",
-        "size": 422400
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.activation.json",
-        "sha256": "sha256:d4e8efb167047fa56b373d66eb740e3423a1c2364da92ac9fc2203fa1716a8ed",
-        "size": 605
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.plugin.yaml",
-        "sha256": "sha256:f1020d7acf364af9127e2e086c0cd4be5e9af3443a15cba0e55771de43d447b2",
-        "size": 572
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.scaffold.yaml",
-        "sha256": "sha256:d1fdedc7c1f16293e47200222cf0ec13e5f21345aa27f8778a21b5e742a78963",
-        "size": 192
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.verification.json",
-        "sha256": "sha256:a60ecac78e0030591c3fc2d1f264dec46b8eb2414e3510f357001c3274ac1f88",
-        "size": 757
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/openstrata_activate.py",
-        "sha256": "sha256:176de8d437ce69ba9cf52e490c6a84ce45c799b146258d50a6db396930ba764d",
-        "size": 1779
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json",
-        "sha256": "sha256:7da433325934f208b2e5176d2f0ebf9b92abc46f04ba0796b2c68d626c8c2731",
-        "size": 742
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json.in",
-        "sha256": "sha256:3e45517be7a33bc0579e1b9edbc36bc459468fc2d029aa519c147c596c62cb7b",
-        "size": 798
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.geojson",
-        "sha256": "sha256:2358cdcd04f2a68c933ba341ef7245696d095c7230aaf10800935eec8f6bc637",
-        "size": 210
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.geojson.golden.usda",
-        "sha256": "sha256:4352780feec8916774e846128e0e675463f275022aad0af08a0ce820f6ece609",
-        "size": 896
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.json",
-        "sha256": "sha256:ed77e3aba92093ccc9d83a64ddb4d30866895d76d5f168dd95fb06bb0f7f4784",
-        "size": 229
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.json.golden.usda",
-        "sha256": "sha256:c86aa49bcab64b08c0395bad89dbd70c45b05bce28a2cd6940197dc3ddc6905b",
-        "size": 893
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/invalid.geojson",
-        "sha256": "sha256:993952928aa6cef4cb7144e3d5ce4b7aea3eab73605591413028b5d12eb4ce6f",
-        "size": 76
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/unrelated.json",
-        "sha256": "sha256:986817eff0461297b7dde91974a5cf8f98972d73cb077aa5fece13b380cf47c3",
-        "size": 58
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/validation/environment.json",
-        "sha256": "sha256:3cded30a12d45435d2f40f16d60440e2f0675f2895de5f5df8c24361858a6b07",
-        "size": 1048
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/bundles/vector-geojson/validation/report.json",
-        "sha256": "sha256:1396d1d5d71827900dfda32d3771cf5cc848cd052cac744f3ac48b2d1425ea4b",
-        "size": 2512
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/data/0000/__pycache__/packaged_probe.cpython-313.pyc",
-        "sha256": "sha256:6a6df43283eb0213056ba86cbe20a559dfccc899c0b9fb48ded2c95cd4f2377f",
-        "size": 11301
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/data/0000/packaged_probe.py",
-        "sha256": "sha256:ad60938b2b6dc7ab2c26d16f8be66024835ee450ea6c77c40ee801a9617c2241",
-        "size": 8274
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/members/vector-geojson/SHA256SUMS",
-        "sha256": "sha256:b121bb6e30e4f47bc82e4507fb30788815944de67949dd155529e73451bb9265",
-        "size": 341
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/members/vector-geojson/manifest.json",
-        "sha256": "sha256:8f0f99f063344c0064ec7768133134c633846dd06748be4402e9a1b4db79bde4",
-        "size": 8932
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/members/vector-geojson/sbom.spdx.json",
-        "sha256": "sha256:5809b57bd81c4b093dbc9a5f282d0661f1ac506321fcaa643d03f251d55728b3",
-        "size": 10019
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/members/vector-geojson/vector-geojson-0.1.0-cy2026-windows-x86_64-py313-usd-debug.tar.zst",
-        "sha256": "sha256:feb4af79c301075738cc67936f8a2c3dafafc9888516b197ac9f46d85567bed8",
-        "size": 2903999
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/members/vector-geojson/vector-geojson-0.1.0-cy2026-windows-x86_64-py313-usd.tar.zst",
-        "sha256": "sha256:cbc252f55e40ad7b890977a363605f347c208890cd5459dd7eda5c4cfecea039",
-        "size": 151842
-      }
-    },
-    {
-      "component": "usd-vector-plugins",
-      "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-      "file": {
-        "path": "components/usd-vector-plugins/openstrata.product.json",
-        "sha256": "sha256:910bec41e0c28a1794915aedeeed7db033d474b884bf787ba5ab2b681e69ffb5",
-        "size": 2067
-      }
-    },
-    {
       "component": "usdAssetCache",
       "artifact": "sha256:79a343a0e76a07bcdcf500a064cefefe1665d07bb2f1ec9ea966d23acc373027",
       "file": {
@@ -85413,186 +84843,6 @@
           "path": "bundles/raster-geotiff/validation/report.json",
           "sha256": "sha256:1cff47348792c4cdb1e6ad5734d86c3234e6ca7c9efec2622ebd8ca89b4b6072",
           "size": 2492
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/activate.ps1",
-        "file": {
-          "path": "bundles/vector-geojson/activate.ps1",
-          "sha256": "sha256:bff9261074990dca12109a124dfb2f685e0314c6c1874911af157225f5ead80b",
-          "size": 851
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/activate.sh",
-        "file": {
-          "path": "bundles/vector-geojson/activate.sh",
-          "sha256": "sha256:7c9f23912a8508273f0c462d41a6c619c4a781d52307a4be08fb2b378b8a111f",
-          "size": 646
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/lib/libUsdVectorGeoJsonFileFormat.dll",
-        "file": {
-          "path": "bundles/vector-geojson/lib/libUsdVectorGeoJsonFileFormat.dll",
-          "sha256": "sha256:29e172eae29ed8716cef1f721d1bfc97b1840aa81bbac28aa951a6c82c86392a",
-          "size": 422400
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.activation.json",
-        "file": {
-          "path": "bundles/vector-geojson/openstrata.activation.json",
-          "sha256": "sha256:d4e8efb167047fa56b373d66eb740e3423a1c2364da92ac9fc2203fa1716a8ed",
-          "size": 605
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.plugin.yaml",
-        "file": {
-          "path": "bundles/vector-geojson/openstrata.plugin.yaml",
-          "sha256": "sha256:f1020d7acf364af9127e2e086c0cd4be5e9af3443a15cba0e55771de43d447b2",
-          "size": 572
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.scaffold.yaml",
-        "file": {
-          "path": "bundles/vector-geojson/openstrata.scaffold.yaml",
-          "sha256": "sha256:d1fdedc7c1f16293e47200222cf0ec13e5f21345aa27f8778a21b5e742a78963",
-          "size": 192
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/openstrata.verification.json",
-        "file": {
-          "path": "bundles/vector-geojson/openstrata.verification.json",
-          "sha256": "sha256:a60ecac78e0030591c3fc2d1f264dec46b8eb2414e3510f357001c3274ac1f88",
-          "size": 757
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/openstrata_activate.py",
-        "file": {
-          "path": "bundles/vector-geojson/openstrata_activate.py",
-          "sha256": "sha256:176de8d437ce69ba9cf52e490c6a84ce45c799b146258d50a6db396930ba764d",
-          "size": 1779
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json",
-        "file": {
-          "path": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json",
-          "sha256": "sha256:7da433325934f208b2e5176d2f0ebf9b92abc46f04ba0796b2c68d626c8c2731",
-          "size": 742
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json.in",
-        "file": {
-          "path": "bundles/vector-geojson/plugin/resources/vector-geojson/plugInfo.json.in",
-          "sha256": "sha256:3e45517be7a33bc0579e1b9edbc36bc459468fc2d029aa519c147c596c62cb7b",
-          "size": 798
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.geojson",
-        "file": {
-          "path": "bundles/vector-geojson/tests/fixtures/basic.geojson",
-          "sha256": "sha256:2358cdcd04f2a68c933ba341ef7245696d095c7230aaf10800935eec8f6bc637",
-          "size": 210
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.geojson.golden.usda",
-        "file": {
-          "path": "bundles/vector-geojson/tests/fixtures/basic.geojson.golden.usda",
-          "sha256": "sha256:4352780feec8916774e846128e0e675463f275022aad0af08a0ce820f6ece609",
-          "size": 896
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.json",
-        "file": {
-          "path": "bundles/vector-geojson/tests/fixtures/basic.json",
-          "sha256": "sha256:ed77e3aba92093ccc9d83a64ddb4d30866895d76d5f168dd95fb06bb0f7f4784",
-          "size": 229
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/basic.json.golden.usda",
-        "file": {
-          "path": "bundles/vector-geojson/tests/fixtures/basic.json.golden.usda",
-          "sha256": "sha256:c86aa49bcab64b08c0395bad89dbd70c45b05bce28a2cd6940197dc3ddc6905b",
-          "size": 893
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/invalid.geojson",
-        "file": {
-          "path": "bundles/vector-geojson/tests/fixtures/invalid.geojson",
-          "sha256": "sha256:993952928aa6cef4cb7144e3d5ce4b7aea3eab73605591413028b5d12eb4ce6f",
-          "size": 76
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/tests/fixtures/unrelated.json",
-        "file": {
-          "path": "bundles/vector-geojson/tests/fixtures/unrelated.json",
-          "sha256": "sha256:986817eff0461297b7dde91974a5cf8f98972d73cb077aa5fece13b380cf47c3",
-          "size": 58
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/validation/environment.json",
-        "file": {
-          "path": "bundles/vector-geojson/validation/environment.json",
-          "sha256": "sha256:3cded30a12d45435d2f40f16d60440e2f0675f2895de5f5df8c24361858a6b07",
-          "size": 1048
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/bundles/vector-geojson/validation/report.json",
-        "file": {
-          "path": "bundles/vector-geojson/validation/report.json",
-          "sha256": "sha256:1396d1d5d71827900dfda32d3771cf5cc848cd052cac744f3ac48b2d1425ea4b",
-          "size": 2512
         }
       },
       {
@@ -126646,26 +125896,6 @@
         }
       },
       {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/data/0000/__pycache__/packaged_probe.cpython-313.pyc",
-        "file": {
-          "path": "share/usd-vector-plugins/probes/__pycache__/packaged_probe.cpython-313.pyc",
-          "sha256": "sha256:6a6df43283eb0213056ba86cbe20a559dfccc899c0b9fb48ded2c95cd4f2377f",
-          "size": 11301
-        }
-      },
-      {
-        "component": "usd-vector-plugins",
-        "artifact": "sha256:153c20f39cc37ca70b32600a607eab8e31af02b959c53e9689db218f9774d8d8",
-        "source": "components/usd-vector-plugins/data/0000/packaged_probe.py",
-        "file": {
-          "path": "share/usd-vector-plugins/probes/packaged_probe.py",
-          "sha256": "sha256:ad60938b2b6dc7ab2c26d16f8be66024835ee450ea6c77c40ee801a9617c2241",
-          "size": 8274
-        }
-      },
-      {
         "component": "openstrata-cy2026-windows-x86_64-py313-usd",
         "artifact": "sha256:51c19df2725955adfc3ef2e96ba6da6561d332a923275eb133c3802a1f659a1c",
         "source": "components/openstrata-cy2026-windows-x86_64-py313-usd/share/usd/examples/bin/usdMakeFileVariantModelAsset",
@@ -127255,14 +126485,6 @@
         {
           "key": "PATH",
           "operation": "prepend",
-          "source": "usd-vector-plugins",
-          "paths": [
-            "components/usd-vector-plugins/bundles/vector-geojson/lib"
-          ]
-        },
-        {
-          "key": "PATH",
-          "operation": "prepend",
           "source": "usdAssetCache",
           "paths": [
             "components/usdAssetCache/lib"
@@ -127338,14 +126560,6 @@
           "source": "usd-raster-plugins",
           "paths": [
             "components/usd-raster-plugins/bundles/raster-geotiff/plugin/resources/raster-geotiff"
-          ]
-        },
-        {
-          "key": "PXR_PLUGINPATH_NAME",
-          "operation": "prepend",
-          "source": "usd-vector-plugins",
-          "paths": [
-            "components/usd-vector-plugins/bundles/vector-geojson/plugin/resources/vector-geojson"
           ]
         },
         {
@@ -127513,14 +126727,6 @@
         {
           "key": "PATH",
           "operation": "prepend",
-          "source": "usd-vector-plugins",
-          "paths": [
-            "components/usd-vector-plugins/bundles/vector-geojson/lib"
-          ]
-        },
-        {
-          "key": "PATH",
-          "operation": "prepend",
           "source": "usdAssetCache",
           "paths": [
             "components/usdAssetCache/lib"
@@ -127596,14 +126802,6 @@
           "source": "usd-raster-plugins",
           "paths": [
             "components/usd-raster-plugins/bundles/raster-geotiff/plugin/resources/raster-geotiff"
-          ]
-        },
-        {
-          "key": "PXR_PLUGINPATH_NAME",
-          "operation": "prepend",
-          "source": "usd-vector-plugins",
-          "paths": [
-            "components/usd-vector-plugins/bundles/vector-geojson/plugin/resources/vector-geojson"
           ]
         },
         {
@@ -127771,14 +126969,6 @@
         {
           "key": "PATH",
           "operation": "prepend",
-          "source": "usd-vector-plugins",
-          "paths": [
-            "components/usd-vector-plugins/bundles/vector-geojson/lib"
-          ]
-        },
-        {
-          "key": "PATH",
-          "operation": "prepend",
           "source": "usdAssetCache",
           "paths": [
             "components/usdAssetCache/lib"
@@ -127857,14 +127047,6 @@
           ]
         },
         {
-          "key": "PXR_PLUGINPATH_NAME",
-          "operation": "prepend",
-          "source": "usd-vector-plugins",
-          "paths": [
-            "components/usd-vector-plugins/bundles/vector-geojson/plugin/resources/vector-geojson"
-          ]
-        },
-        {
           "key": "PYTHONPATH",
           "operation": "prepend",
           "source": "openstrata-cy2026-windows-x86_64-py313-usd",
@@ -127927,5 +127109,5 @@
       "PYTHONNOUSERSITE": "1"
     }
   },
-  "runtime_digest": "sha256:562444f47821138f9f92b9f657832624ecee98bd7154021078b3fc198fb1c2f8"
+  "runtime_digest": "sha256:904b8c12be5668fde17eda3f49c22b5cc30a253a5ffd3cf851d136ea7457f6bc"
 }

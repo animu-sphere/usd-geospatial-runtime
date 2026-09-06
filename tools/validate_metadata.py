@@ -97,19 +97,9 @@ def check_status(entry):
     return entry if isinstance(entry, str) else entry.get("status")
 
 
-def required_checks_of(record, baseline):
-    """Return the checks a record's own release required.
-
-    A record written before the field existed required exactly the v1 baseline,
-    so a historical record stays valid when a later release adds a capability.
-    """
-    return set(record.get("required_checks", baseline))
-
-
 def validate_evidence(root, report):
     """Check every committed release-evidence record against its schema."""
     schema = load_schema(root, "release-evidence.v1.json")
-    baseline = schema["properties"]["checks"]["required"]
     locks = {}
     for manifest_path in runtime_metadata.manifests(root):
         slug = runtime_metadata.slug_of(manifest_path)
@@ -137,14 +127,9 @@ def validate_evidence(root, report):
         report.check(f"{name}: has a release record",
                      (root / "docs/releases" / f"{record['release']}.md").is_file())
         target = record["target"]
-        report.check(f"{name}: target {target} has a committed composition", target in locks)
-        required = required_checks_of(record, baseline)
-        report.check(f"{name}: records every check its release required",
-                     required <= set(record["checks"]),
-                     ", ".join(sorted(required - set(record["checks"]))))
-        report.check(f"{name}: never drops a check the contract already required",
-                     set(baseline) <= required,
-                     ", ".join(sorted(set(baseline) - required)))
+        if report.check(f"{name}: target {target} has a committed composition", target in locks):
+            report.check(f"{name}: runtime digest matches the lock",
+                         record["runtime_digest"] == locks[target]["runtime_digest"])
         report.check(f"{name}: composition was reproduced from public inputs",
                      record["clean_public_input_compose"])
         report.check(f"{name}: composed artifact was reconstructed",
@@ -155,14 +140,10 @@ def validate_runtime_metadata(root, report):
     """Check that the committed metadata is schema valid and not stale."""
     schema = load_schema(root, "runtime-metadata.v1.json")
     try:
-        generated, pending = runtime_metadata.generate(root)
+        generated = runtime_metadata.documents(root)
     except (runtime_metadata.MetadataError, KeyError, OSError, ValueError) as error:
         report.failed("runtime metadata: generation", f"{type(error).__name__}: {error}")
         return
-    for path, error in pending.items():
-        name = path.relative_to(root).as_posix()
-        print(f"note {name}: composition awaits release acceptance; {error}")
-        validate_committed_metadata(root, path, schema, name, report)
     for path, document in generated.items():
         name = path.relative_to(root).as_posix()
         errors = jsonschema_lite.errors_for(document, schema)
@@ -172,32 +153,6 @@ def validate_runtime_metadata(root, report):
                      path.is_file() and path.read_text(encoding="utf-8") == text,
                      "run 'python tools/runtime_metadata.py --write'")
         validate_published_identities(root, document, name, report)
-
-
-def validate_committed_metadata(root, path, schema, name, report):
-    """Check the document a pending target keeps, which no generation reproduces.
-
-    While the composition sits ahead of its evidence the committed document still
-    describes the last accepted release, so it is checked against that record
-    rather than against the lock the composition now resolves.
-    """
-    if not report.check(f"{name}: is committed", path.is_file()):
-        return
-    document = json.loads(path.read_text(encoding="utf-8"))
-    errors = jsonschema_lite.errors_for(document, schema)
-    if not report.check(f"{name}: matches runtime-metadata.v1", not errors, "; ".join(errors)):
-        return
-    record_path = root / document["evidence"]["evidence_file"]
-    if not report.check(f"{name}: names a committed evidence record", record_path.is_file(),
-                        str(record_path)):
-        return
-    record = json.loads(record_path.read_text(encoding="utf-8"))
-    report.check(f"{name}: describes the release it names",
-                 document["runtime"]["release"] == record["release"])
-    for field in ("runtime_digest", "composed_artifact", "composed_oci_manifest"):
-        report.check(f"{name}: {field} agrees with the evidence it names",
-                     document["identity"][field] == record[field])
-    validate_published_identities(root, document, name, report)
 
 
 def validate_published_identities(root, document, name, report):
@@ -252,13 +207,10 @@ def validate_acceptance_contract(root, report):
     report.check("acceptance: a partial report fails",
                  partial["status"] == "failed" and "error" in partial)
 
-    checks_schema = load_schema(root, "release-evidence.v1.json")["properties"]["checks"]
-    baseline, declared = set(checks_schema["required"]), set(checks_schema["properties"])
-    required = set(accept.REQUIRED_CHECKS)
-    report.check("acceptance: every required check has a declared evidence shape",
-                 required <= declared, ", ".join(sorted(required - declared)))
-    report.check("acceptance: no check the evidence baseline requires was dropped",
-                 baseline <= required, ", ".join(sorted(baseline - required)))
+    evidence_checks = set(load_schema(root, "release-evidence.v1.json")["properties"]["checks"]["required"])
+    report.check("acceptance: release evidence requires every acceptance check",
+                 set(accept.REQUIRED_CHECKS) == evidence_checks,
+                 f"{sorted(accept.REQUIRED_CHECKS)} != {sorted(evidence_checks)}")
 
 
 def validate_release(root, tag, report):
@@ -267,40 +219,10 @@ def validate_release(root, tag, report):
     report.check(f"release: tag {tag} matches VERSION {version}", tag == f"v{version}")
     report.check(f"release: docs/releases/{tag}.md exists",
                  (root / "docs/releases" / f"{tag}.md").is_file())
-    records = {}
-    for path in (root / "evidence").glob("*.json"):
-        record = json.loads(path.read_text(encoding="utf-8"))
-        records.setdefault(record.get("release"), []).append(record)
-    if not report.check(f"release: evidence records acceptance for {tag}", tag in records,
-                        f"committed evidence covers {sorted(r for r in records if r)}"):
-        return
-    baseline = load_schema(root, "release-evidence.v1.json")["properties"]["checks"]["required"]
-    for record in records[tag]:
-        target = record["target"]
-        lock_path = root / f"runtime.{slug_for_target(root, target)}.lock.json"
-        if not report.check(f"release: {target} has a committed composition", lock_path.is_file(),
-                            str(lock_path)):
-            continue
-        lock = json.loads(lock_path.read_text(encoding="utf-8"))
-        report.check(f"release: {tag} accepts the committed {target} composition",
-                     record["runtime_digest"] == lock["runtime_digest"],
-                     f"{record['runtime_digest']} != {lock['runtime_digest']}")
-        declared = required_checks_of(record, baseline)
-        report.check(f"release: {tag} declares the current acceptance contract for {target}",
-                     declared == set(accept.REQUIRED_CHECKS),
-                     f"{sorted(declared)} != {sorted(accept.REQUIRED_CHECKS)}")
-
-
-def slug_for_target(root, target):
-    """Return the manifest slug whose lock resolves a target."""
-    for manifest_path in runtime_metadata.manifests(root):
-        slug = runtime_metadata.slug_of(manifest_path)
-        lock_path = root / f"runtime.{slug}.lock.json"
-        if lock_path.is_file():
-            lock = json.loads(lock_path.read_text(encoding="utf-8"))
-            if lock["resolved"]["target"] == target:
-                return slug
-    return target
+    releases = {json.loads(path.read_text(encoding="utf-8")).get("release")
+                for path in (root / "evidence").glob("*.json")}
+    report.check(f"release: evidence records acceptance for {tag}", tag in releases,
+                 f"committed evidence covers {sorted(r for r in releases if r)}")
 
 
 def main(argv=None):

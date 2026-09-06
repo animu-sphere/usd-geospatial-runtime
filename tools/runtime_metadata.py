@@ -1,13 +1,9 @@
 """Generate the machine-readable runtime metadata for each composed target.
 
 The metadata document is derived only from committed inputs: the composition
-manifest, its lock, and the release evidence that accepted that exact runtime. It
-is regenerated rather than edited, and CI fails when the committed document
-differs from the generated one.
-
-A composition may sit ahead of its evidence while a new capability is composed
-but not yet released. That target is reported as pending and its committed
-document is left describing the release it still names.
+manifest, its lock, and the accepted release evidence for the same target. It is
+regenerated rather than edited, and CI fails when the committed document differs
+from the generated one.
 """
 
 import argparse
@@ -31,17 +27,6 @@ OS_NAMES = {"windows": "windows", "linux": "linux", "macos": "macos"}
 
 class MetadataError(RuntimeError):
     """A committed input does not describe a usable target."""
-
-
-class PendingReleaseError(MetadataError):
-    """The committed composition has not been accepted by any committed evidence.
-
-    This is the state between composing a new capability and releasing it. The
-    metadata document is not regenerated while it holds, because the composition
-    identity comes from the lock and the published artifact identity comes from
-    the evidence, and pairing the two would publish a runtime identity that no
-    accepted release ever carried.
-    """
 
 
 def slug_of(manifest: Path) -> str:
@@ -79,8 +64,8 @@ def release_key(release: str) -> tuple:
     return int(match["major"]), int(match["minor"]), int(match["patch"])
 
 
-def select_evidence(root: Path, target: str, runtime_digest: str) -> tuple:
-    """Return the newest committed evidence record that accepted this runtime."""
+def select_evidence(root: Path, target: str) -> tuple:
+    """Return the newest committed evidence record for a target."""
     candidates = []
     for path in sorted((root / "evidence").glob("*.json")):
         record = json.loads(path.read_text(encoding="utf-8"))
@@ -88,14 +73,7 @@ def select_evidence(root: Path, target: str, runtime_digest: str) -> tuple:
             candidates.append((release_key(record["release"]), path, record))
     if not candidates:
         raise MetadataError(f"no committed evidence record for target {target!r}")
-    accepted = [item for item in candidates if item[2]["runtime_digest"] == runtime_digest]
-    if not accepted:
-        newest = max(candidates, key=lambda item: item[0])[2]
-        raise PendingReleaseError(
-            f"the {target} composition resolves runtime {runtime_digest}, which no committed "
-            f"evidence accepts; the newest record is {newest['release']} for {newest['runtime_digest']}"
-        )
-    _, path, record = max(accepted, key=lambda item: item[0])
+    _, path, record = max(candidates, key=lambda item: item[0])
     return path, record
 
 
@@ -154,7 +132,7 @@ def build(root: Path, manifest_path: Path) -> dict:
         INTERPRETER_PATTERN.search(item["destination"]) for item in resolved["install"]
     )
 
-    evidence_path, evidence = select_evidence(root, target, lock["runtime_digest"])
+    evidence_path, evidence = select_evidence(root, target)
     release = evidence["release"]
     release_record = root / "docs/releases" / f"{release}.md"
     if not release_record.is_file():
@@ -202,20 +180,9 @@ def manifests(root: Path) -> list:
     return found
 
 
-def generate(root: Path) -> tuple:
-    """Return the generated documents and the targets still awaiting a release.
-
-    Pending targets are returned rather than raised so one composition waiting on
-    its release does not hide a real problem in another.
-    """
-    generated, pending = {}, {}
-    for path in manifests(root):
-        destination = root / f"runtime-metadata.{slug_of(path)}.json"
-        try:
-            generated[destination] = build(root, path)
-        except PendingReleaseError as error:
-            pending[destination] = error
-    return generated, pending
+def documents(root: Path) -> dict:
+    """Return the generated metadata document for every manifest, keyed by path."""
+    return {root / f"runtime-metadata.{slug_of(path)}.json": build(root, path) for path in manifests(root)}
 
 
 def serialize(document: dict) -> str:
@@ -230,13 +197,10 @@ def main(argv=None):
     root = args.root.resolve()
 
     try:
-        generated, pending = generate(root)
+        generated = documents(root)
     except (MetadataError, KeyError, OSError, ValueError) as error:
         print(f"runtime metadata: {error}", file=sys.stderr)
         return 1
-
-    for path, error in pending.items():
-        print(f"{path.relative_to(root).as_posix()}: left as committed; {error}")
 
     stale = []
     for path, document in generated.items():
@@ -254,8 +218,7 @@ def main(argv=None):
         )
         return 1
     if not args.write:
-        print(f"runtime metadata: {len(generated)} document(s) up to date"
-              + (f", {len(pending)} awaiting release" if pending else ""))
+        print(f"runtime metadata: {len(generated)} document(s) up to date")
     return 0
 
 
