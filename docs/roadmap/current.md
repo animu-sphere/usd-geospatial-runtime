@@ -93,8 +93,9 @@ needs a loaded runtime.
 - Run the OpenUSD lane in CI. The core lane already builds and tests per
   commit; the OpenUSD lane needs a composed prefix and a toolchain matching the
   target, so it belongs with acceptance rather than with the per-commit checks
-  and has no runner yet. Its tests now cover `formats` and every `open` failure
-  path, but none of that is proven until that runner exists.
+  and now runs on `windows-2022` with a digest-verified OpenStrata CLI. Its
+  tests cover `formats` and every `open` failure path, and the installed SDK is
+  exercised through `tests/native-consumer`.
 - Decide how the SDK is delivered. It is currently built from source against a
   prefix. Publishing it as an OpenStrata component would let a consumer acquire
   it the way every other component is acquired, and would let `runtime_info`

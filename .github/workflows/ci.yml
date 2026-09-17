@@ -44,3 +44,77 @@ jobs:
       - name: Test the core lane
         shell: bash
         run: ctest --test-dir build/sdk-core -C Release --output-on-failure
+
+  sdk-usd:
+    # The OpenUSD lane runs against the released target on the toolchain it
+    # names. It is separate from the OpenUSD-free lane because composing the
+    # prefix is both target-specific and network-backed.
+    runs-on: windows-2022
+    env:
+      OST_VERSION: 0.22.10
+      OST_ARCHIVE_SHA256: f716ebe7b89c825970e73d5a33a17ad9adb8daf2dcdf9707fc98323560589b18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
+      - name: Install OpenStrata CLI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'ost-cli.zip'
+          $install = Join-Path $env:RUNNER_TEMP 'ost-cli'
+          $url = "https://github.com/animu-sphere/open-strata/releases/download/v$env:OST_VERSION/ost-cli-x86_64-pc-windows-msvc.zip"
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          $actual = (Get-FileHash -Path $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $env:OST_ARCHIVE_SHA256) {
+              throw "ost archive digest mismatch: expected $env:OST_ARCHIVE_SHA256, got $actual"
+          }
+          Expand-Archive -Path $archive -DestinationPath $install -Force
+          $install | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & (Join-Path $install 'ost.exe') --version
+      - name: Compose the locked runtime
+        shell: pwsh
+        run: >-
+          ost runtime compose
+          targets/windows-x86_64-msvc143-py313/composition.toml
+          --lock targets/windows-x86_64-msvc143-py313/lock.json
+          --locked --output .local/composed
+      - name: Configure the OpenUSD SDK lane
+        shell: pwsh
+        run: |
+          $composition = (Resolve-Path '.local/composed').Path
+          cmake -S sdk -B build/sdk-usd `
+              "-Dpxr_ROOT=$composition" `
+              "-DCMAKE_PREFIX_PATH=$composition" `
+              -DCMAKE_BUILD_TYPE=Release
+      - name: Build the OpenUSD SDK lane
+        shell: pwsh
+        run: cmake --build build/sdk-usd --config Release
+      - name: Test the OpenUSD SDK lane
+        shell: pwsh
+        run: >-
+          python tools/sdk_env.py --composition .local/composed --
+          ctest --test-dir build/sdk-usd -C Release --output-on-failure
+      - name: Install the SDK package
+        shell: pwsh
+        run: cmake --install build/sdk-usd --config Release --prefix build/sdk-install
+      - name: Configure the external consumer
+        shell: pwsh
+        run: |
+          $root = (Get-Location).Path
+          $composition = Join-Path $root '.local\composed'
+          $sdk = Join-Path $root 'build\sdk-install'
+          $prefix = "$composition;$sdk"
+          cmake -S tests/native-consumer -B build/consumer `
+              "-DCMAKE_PREFIX_PATH=$prefix" `
+              "-Dpxr_ROOT=$composition" `
+              -DCMAKE_BUILD_TYPE=Release
+      - name: Build the external consumer
+        shell: pwsh
+        run: cmake --build build/consumer --config Release
+      - name: Test the external consumer
+        shell: pwsh
+        run: >-
+          python tools/sdk_env.py --composition .local/composed --
+          ctest --test-dir build/consumer -C Release --output-on-failure
