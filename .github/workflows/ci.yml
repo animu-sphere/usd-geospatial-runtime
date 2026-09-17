@@ -46,9 +46,9 @@ jobs:
         run: ctest --test-dir build/sdk-core -C Release --output-on-failure
 
   sdk-usd:
-    # The OpenUSD lane runs against the released target on the toolchain it
-    # names. It is separate from the OpenUSD-free lane because composing the
-    # prefix is both target-specific and network-backed.
+    # Disabled pending a relocatable OpenUSD runtime package. See
+    # docs/reports/ost/01-2026-09-18-v0.22.10-openusd-runtime-python-paths.md.
+    if: ${{ false }}
     runs-on: windows-2022
     env:
       OST_VERSION: 0.22.10

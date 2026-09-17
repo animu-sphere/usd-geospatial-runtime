@@ -90,12 +90,12 @@ needs a loaded runtime.
 - Add `inspect`. It still has no proven contract: it needs a defined result --
   what it reports for an asset that opens, and what it reports for one that
   does not -- before it has a shape.
-- Run the OpenUSD lane in CI. The core lane already builds and tests per
-  commit; the OpenUSD lane needs a composed prefix and a toolchain matching the
-  target, so it belongs with acceptance rather than with the per-commit checks
-  and now runs on `windows-2022` with a digest-verified OpenStrata CLI. Its
-  tests cover `formats` and every `open` failure path, and the installed SDK is
-  exercised through `tests/native-consumer`.
+- Run the OpenUSD lane in CI. The lane is currently disabled after PR #7's
+  hosted Windows run exposed producer-specific Python paths in the published
+  OpenUSD CMake package; see the [OST dogfooding report](../reports/ost/01-2026-09-18-v0.22.10-openusd-runtime-python-paths.md).
+  The metadata and OpenUSD-free core lanes remain active. Re-enable this lane
+  after a relocatable runtime is published or a complete, tested repair is
+  available.
 - Decide how the SDK is delivered. It is currently built from source against a
   prefix. Publishing it as an OpenStrata component would let a consumer acquire
   it the way every other component is acquired, and would let `runtime_info`
