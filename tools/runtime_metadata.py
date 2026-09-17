@@ -16,7 +16,7 @@ import tomllib
 SCHEMA = "usd-geospatial-runtime.runtime-metadata/v1"
 TOOL = "tools/runtime_metadata.py"
 COMPOSED_OCI_REPOSITORY = "ghcr.io/animu-sphere/usd-geospatial-runtime"
-MANIFEST_GLOB = "runtime-composition.*.toml"
+MANIFEST_GLOB = "targets/*/composition.toml"
 TARGET_PATTERN = re.compile(
     r"^(?P<os>[a-z0-9]+)-(?P<arch>[a-z0-9_]+)-(?P<toolchain>[a-z0-9]+)-(?P<host_abi>py(?P<py>[0-9]{2,3}))$"
 )
@@ -29,12 +29,21 @@ class MetadataError(RuntimeError):
     """A committed input does not describe a usable target."""
 
 
-def slug_of(manifest: Path) -> str:
-    """Return the target slug embedded in a manifest filename."""
-    name = manifest.name
-    if not name.startswith("runtime-composition.") or not name.endswith(".toml"):
-        raise MetadataError(f"{name} is not a composition manifest filename")
-    return name[len("runtime-composition."):-len(".toml")]
+def target_of(manifest: Path) -> str:
+    """Return the canonical target directory containing a manifest."""
+    if manifest.name != "composition.toml" or manifest.parent.name == "targets":
+        raise MetadataError(f"{manifest} is not a target composition manifest")
+    return manifest.parent.name
+
+
+def lock_path(manifest: Path) -> Path:
+    """Return the lock path associated with a manifest."""
+    return manifest.with_name("lock.json")
+
+
+def metadata_path(manifest: Path) -> Path:
+    """Return the generated metadata path associated with a manifest."""
+    return manifest.with_name("metadata.json")
 
 
 def target_identity(target: str, usd_version: str, bundles_python: bool) -> dict:
@@ -79,12 +88,16 @@ def select_evidence(root: Path, target: str) -> tuple:
 
 def build(root: Path, manifest_path: Path) -> dict:
     """Build the metadata document for one composition manifest."""
-    slug = slug_of(manifest_path)
-    lock_path = root / f"runtime.{slug}.lock.json"
+    layout_target = target_of(manifest_path)
+    lock_file = lock_path(manifest_path)
     manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
-    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    lock = json.loads(lock_file.read_text(encoding="utf-8"))
     resolved = lock["resolved"]
     target = manifest["composition"]["target"]
+    if layout_target != target:
+        raise MetadataError(
+            f"target directory {layout_target!r} does not match manifest target {target!r}"
+        )
     if resolved["target"] != target:
         raise MetadataError(f"lock target {resolved['target']!r} does not match manifest {target!r}")
 
@@ -144,7 +157,7 @@ def build(root: Path, manifest_path: Path) -> dict:
             "tool": TOOL,
             "inputs": {
                 "manifest": manifest_path.relative_to(root).as_posix(),
-                "lock": lock_path.relative_to(root).as_posix(),
+                "lock": lock_file.relative_to(root).as_posix(),
                 "evidence": evidence_path.relative_to(root).as_posix(),
             },
         },
@@ -182,7 +195,7 @@ def manifests(root: Path) -> list:
 
 def documents(root: Path) -> dict:
     """Return the generated metadata document for every manifest, keyed by path."""
-    return {root / f"runtime-metadata.{slug_of(path)}.json": build(root, path) for path in manifests(root)}
+    return {metadata_path(path): build(root, path) for path in manifests(root)}
 
 
 def serialize(document: dict) -> str:

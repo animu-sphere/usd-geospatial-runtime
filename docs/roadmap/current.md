@@ -48,7 +48,7 @@ The other two concerns this item once raised are closed and need no further work
 What this repository does when a conforming product is published:
 
 - Add the requirement, candidate artifact, and provider mapping to
-  `runtime-composition.windows.toml`, recompose, and confirm the product manifest
+  `targets/<target>/composition.toml`, recompose, and confirm the product manifest
   records runtime identity `sha256:3a4e3993...` before pinning it.
 - Add a `vector` check to `tools/accept.py`, to the
   [acceptance contract](../reference/acceptance-contract.md), and to
@@ -68,17 +68,6 @@ What this repository does when a conforming product is published:
 Completion means the reconstructed artifact opens a GeoJSON asset through
 capability discovery, and its release evidence records a passing `vector` check
 next to the existing ones.
-
-## P1: Introduce target-aware composition layout
-
-- Accept the proposed layout, then move active manifests, locks, and generated
-  metadata into it.
-- Confirm the move leaves the manifest, composition, and runtime digests
-  unchanged before treating it as a relocation rather than a release.
-- Preserve old release documentation and reconstruction commands.
-
-Completion means a second target can be added without ambiguous filenames or
-changing historical release claims.
 
 ## P2: Establish the small C++ SDK
 

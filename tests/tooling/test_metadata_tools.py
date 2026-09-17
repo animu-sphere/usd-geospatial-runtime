@@ -29,10 +29,10 @@ DIGEST = "sha256:" + "0" * 64
 COPIED = [
     "README.md",
     "VERSION",
-    "runtime-composition.windows.toml",
-    "runtime.windows.lock.json",
-    "runtime-metadata.windows.json",
-    "evidence/v0.1.0-windows.json",
+    "targets/windows-x86_64-msvc143-py313/composition.toml",
+    "targets/windows-x86_64-msvc143-py313/lock.json",
+    "targets/windows-x86_64-msvc143-py313/metadata.json",
+    "evidence/v0.1.0-windows-x86_64-msvc143-py313.json",
     "docs/releases/v0.1.0.md",
     "schemas/acceptance-report.v1.json",
     "schemas/release-evidence.v1.json",
@@ -45,7 +45,11 @@ def schema(name):
 
 
 def evidence():
-    return json.loads((ROOT / "evidence/v0.1.0-windows.json").read_text(encoding="utf-8"))
+    return json.loads(
+        (ROOT / "evidence/v0.1.0-windows-x86_64-msvc143-py313.json").read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 def rejects(instance, document, reason):
@@ -340,7 +344,9 @@ def test_release_evidence_schema_rejects_incomplete_records():
 
 def test_runtime_metadata_schema_rejects_tampered_documents():
     document = schema("runtime-metadata.v1.json")
-    generated = runtime_metadata.build(ROOT, ROOT / "runtime-composition.windows.toml")
+    generated = runtime_metadata.build(
+        ROOT, ROOT / "targets/windows-x86_64-msvc143-py313/composition.toml"
+    )
     assert not jsonschema_lite.errors_for(generated, document)
 
     tampered = copy.deepcopy(generated)
@@ -378,6 +384,13 @@ def test_target_identity_requires_a_canonical_target():
         except runtime_metadata.MetadataError:
             continue
         raise AssertionError(f"accepted non-canonical target {target!r}")
+
+
+def test_target_layout_derives_sibling_paths():
+    manifest = ROOT / "targets/windows-x86_64-msvc143-py313/composition.toml"
+    assert runtime_metadata.target_of(manifest) == "windows-x86_64-msvc143-py313"
+    assert runtime_metadata.lock_path(manifest) == manifest.with_name("lock.json")
+    assert runtime_metadata.metadata_path(manifest) == manifest.with_name("metadata.json")
 
 
 def test_acceptance_report_tracks_required_checks():
@@ -460,7 +473,8 @@ def test_tier2_verification_rejects_unstable_evidence():
 
 
 def test_metadata_generation_requires_digest_pinned_sources():
-    manifest = (ROOT / "runtime-composition.windows.toml").read_text(encoding="utf-8")
+    manifest_path = ROOT / "targets/windows-x86_64-msvc143-py313/composition.toml"
+    manifest = manifest_path.read_text(encoding="utf-8")
     tagged = manifest.replace(
         "oci://ghcr.io/animu-sphere/usd-raster-plugins@sha256:29bb6712a73aa422c1196cb7cbaa64403703dbeb7af64f47c5d9536c773024de",
         "oci://ghcr.io/animu-sphere/usd-raster-plugins:0.1.0")
@@ -471,9 +485,13 @@ def test_metadata_generation_requires_digest_pinned_sources():
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(ROOT / name, destination)
-        (root / "runtime-composition.windows.toml").write_text(tagged, encoding="utf-8")
+        (root / "targets/windows-x86_64-msvc143-py313/composition.toml").write_text(
+            tagged, encoding="utf-8"
+        )
         try:
-            runtime_metadata.build(root, root / "runtime-composition.windows.toml")
+            runtime_metadata.build(
+                root, root / "targets/windows-x86_64-msvc143-py313/composition.toml"
+            )
         except runtime_metadata.MetadataError:
             pass
         else:
@@ -501,7 +519,7 @@ def test_validator_detects_committed_drift():
         assert run_validator(root) == 1, "a stale README locator must fail"
         readme.write_text(original, encoding="utf-8")
 
-        evidence_path = root / "evidence/v0.1.0-windows.json"
+        evidence_path = root / "evidence/v0.1.0-windows-x86_64-msvc143-py313.json"
         original_evidence = evidence_path.read_text(encoding="utf-8")
 
         record = json.loads(original_evidence)
@@ -516,7 +534,7 @@ def test_validator_detects_committed_drift():
             assert run_validator(root) == 1, f"a failed {check} check must fail the record"
         evidence_path.write_text(original_evidence, encoding="utf-8")
 
-        lock = root / "runtime.windows.lock.json"
+        lock = root / "targets/windows-x86_64-msvc143-py313/lock.json"
         lock.unlink()
         assert run_validator(root) == 1, "a missing lock must fail rather than crash"
 

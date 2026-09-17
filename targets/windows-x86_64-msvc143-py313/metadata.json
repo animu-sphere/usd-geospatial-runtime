@@ -3,9 +3,9 @@
   "generated_by": {
     "tool": "tools/runtime_metadata.py",
     "inputs": {
-      "manifest": "runtime-composition.windows.toml",
-      "lock": "runtime.windows.lock.json",
-      "evidence": "evidence/v0.1.0-windows.json"
+      "manifest": "targets/windows-x86_64-msvc143-py313/composition.toml",
+      "lock": "targets/windows-x86_64-msvc143-py313/lock.json",
+      "evidence": "evidence/v0.1.0-windows-x86_64-msvc143-py313.json"
     }
   },
   "runtime": {
@@ -168,7 +168,7 @@
   "evidence": {
     "release": "v0.1.0",
     "status": "passed",
-    "evidence_file": "evidence/v0.1.0-windows.json",
+    "evidence_file": "evidence/v0.1.0-windows-x86_64-msvc143-py313.json",
     "release_record": "docs/releases/v0.1.0.md"
   }
 }

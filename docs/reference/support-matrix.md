@@ -15,7 +15,8 @@ acceptance evidence.
 
 The machine-readable form of a released target is generated from that target's
 manifest, lock, and accepted evidence and committed next to them; today that is
-`runtime-metadata.windows.json`. Tools should read it instead of this page.
+`targets/windows-x86_64-msvc143-py313/metadata.json`. Tools should read it
+instead of this page.
 
 ## Runtime capabilities
 

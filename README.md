@@ -22,8 +22,8 @@ SBOM, provenance, archive safety, and artifact kind before reconstruction.
 OpenStrata v0.22.8 or newer is required.
 
 ```powershell
-ost runtime compose runtime-composition.windows.toml `
-  --lock runtime.windows.lock.json --locked --output .local/composed
+ost runtime compose targets/windows-x86_64-msvc143-py313/composition.toml `
+  --lock targets/windows-x86_64-msvc143-py313/lock.json --locked --output .local/composed
 python tools/accept.py --composition .local/composed `
   --output .local/evidence
 ```
@@ -47,11 +47,12 @@ host prerequisite and is not bundled.
 
 ## Inspect and validate
 
-`runtime-metadata.windows.json` describes the released target in machine-readable
-form: canonical target identity, immutable composition and artifact identities,
-component versions, and the component that provides each capability. It is
-generated from the manifest, the lock, and the accepted release evidence, and it
-is validated against the schemas in `schemas/`.
+`targets/windows-x86_64-msvc143-py313/metadata.json` describes the released
+target in machine-readable form: canonical target identity, immutable
+composition and artifact identities, component versions, and the component
+that provides each capability. It is generated from the manifest, the lock,
+and the accepted release evidence, and it is validated against the schemas in
+`schemas/`.
 
 ```powershell
 python tools/runtime_metadata.py --write

@@ -40,8 +40,8 @@ generated, is not committed, and is not a release claim on its own.
 ## Committed release evidence
 
 Release evidence is the concise immutable record of a passing release
-acceptance, committed as `evidence/<release>-<slug>.json` — `evidence/v0.1.0-windows.json`
-today — and conforming to
+acceptance, committed as `evidence/<release>-<target>.json` —
+`evidence/v0.1.0-windows-x86_64-msvc143-py313.json` today — and conforming to
 [`schemas/release-evidence.v1.json`](../../schemas/release-evidence.v1.json). It
 is written only after the published composed artifact has also been pulled into
 an empty registry, verified, and reconstructed.

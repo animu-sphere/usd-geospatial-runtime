@@ -106,8 +106,8 @@ The USD lane needs a composed runtime prefix. `pxr_ROOT` is that prefix, and
 the tests derive the runtime they check from it:
 
 ```powershell
-ost runtime compose runtime-composition.windows.toml `
-  --lock runtime.windows.lock.json --locked --output .local/composed
+ost runtime compose targets/windows-x86_64-msvc143-py313/composition.toml `
+  --lock targets/windows-x86_64-msvc143-py313/lock.json --locked --output .local/composed
 cmake -S sdk -B build/sdk -Dpxr_ROOT=.local/composed -DCMAKE_PREFIX_PATH=.local/composed
 cmake --build build/sdk --config Release
 python tools/sdk_env.py --composition .local/composed -- `

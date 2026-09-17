@@ -49,47 +49,47 @@ def load_schema(root, name):
 def validate_composition(root, report):
     """Check that each manifest is fully pinned and matches its lock."""
     for manifest_path in runtime_metadata.manifests(root):
-        slug = runtime_metadata.slug_of(manifest_path)
-        lock_path = root / f"runtime.{slug}.lock.json"
-        if not report.check(f"{slug}: lock present", lock_path.is_file(), str(lock_path)):
+        target_name = runtime_metadata.target_of(manifest_path)
+        lock_path = runtime_metadata.lock_path(manifest_path)
+        if not report.check(f"{target_name}: lock present", lock_path.is_file(), str(lock_path)):
             continue
         manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
         lock = json.loads(lock_path.read_text(encoding="utf-8"))
         embedded = lock["manifest"]
 
-        report.check(f"{slug}: lock embeds the manifest composition",
+        report.check(f"{target_name}: lock embeds the manifest composition",
                      embedded["composition"] == manifest["composition"])
-        report.check(f"{slug}: lock embeds the manifest providers",
+        report.check(f"{target_name}: lock embeds the manifest providers",
                      embedded["providers"] == manifest["providers"])
-        report.check(f"{slug}: lock embeds the manifest artifacts",
+        report.check(f"{target_name}: lock embeds the manifest artifacts",
                      {item["artifact"]: item["source"] for item in embedded["artifacts"]}
                      == {item["artifact"]: item["source"] for item in manifest["artifacts"]})
-        report.check(f"{slug}: lock embeds the manifest requirements",
+        report.check(f"{target_name}: lock embeds the manifest requirements",
                      {tuple(sorted(item.items())) for item in embedded["requirements"]}
                      == {tuple(sorted(item.items())) for item in manifest["requirements"]})
 
         for item in manifest["artifacts"]:
             locator = item["source"]
             repository = locator.split("@", 1)[0]
-            report.check(f"{slug}: artifact {item['artifact'][:19]} is content addressed",
+            report.check(f"{target_name}: artifact {item['artifact'][:19]} is content addressed",
                          bool(DIGEST.match(item["artifact"])))
-            report.check(f"{slug}: source {repository} is pinned by OCI digest",
+            report.check(f"{target_name}: source {repository} is pinned by OCI digest",
                          locator.startswith("oci://") and "@sha256:" in locator
                          and ":" not in repository.rsplit("/", 1)[-1],
                          locator)
 
         pinned = {item["artifact"] for item in manifest["artifacts"]}
         resolved = {component["digest"] for component in lock["resolved"]["components"]}
-        report.check(f"{slug}: every resolved component is pinned", resolved <= pinned,
+        report.check(f"{target_name}: every resolved component is pinned", resolved <= pinned,
                      ", ".join(sorted(resolved - pinned)))
-        report.check(f"{slug}: no candidate artifact is unused", pinned <= resolved,
+        report.check(f"{target_name}: no candidate artifact is unused", pinned <= resolved,
                      ", ".join(sorted(pinned - resolved)))
 
         provided = {provider["capability"] for provider in lock["resolved"]["providers"]}
         required = {item["capability"] for item in manifest["requirements"]}
-        report.check(f"{slug}: every required capability has a provider", required <= provided,
+        report.check(f"{target_name}: every required capability has a provider", required <= provided,
                      ", ".join(sorted(required - provided)))
-        report.check(f"{slug}: the lock records no conflicts", not lock["resolved"]["conflicts"])
+        report.check(f"{target_name}: the lock records no conflicts", not lock["resolved"]["conflicts"])
 
 
 def check_status(entry):
@@ -102,13 +102,14 @@ def validate_evidence(root, report):
     schema = load_schema(root, "release-evidence.v1.json")
     locks = {}
     for manifest_path in runtime_metadata.manifests(root):
-        slug = runtime_metadata.slug_of(manifest_path)
-        lock_path = root / f"runtime.{slug}.lock.json"
+        target_name = runtime_metadata.target_of(manifest_path)
+        lock_path = runtime_metadata.lock_path(manifest_path)
         try:
             lock = json.loads(lock_path.read_text(encoding="utf-8"))
             target = lock["resolved"]["target"]
         except (OSError, ValueError, KeyError) as error:
-            report.failed(f"{slug}: lock is readable and names a target", f"{type(error).__name__}: {error}")
+            report.failed(f"{target_name}: lock is readable and names a target",
+                          f"{type(error).__name__}: {error}")
             continue
         locks[target] = lock
 
