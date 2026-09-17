@@ -1,4 +1,4 @@
-# USD Geospatial Runtime
+# OpenUSD Geospatial Runtime
 
 An immutable OpenStrata composition of OpenUSD 26.08, the HTTP resolver,
 point-cloud FileFormat plugins, and the GeoTIFF FileFormat plugin.
