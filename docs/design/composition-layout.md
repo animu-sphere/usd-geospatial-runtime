@@ -1,16 +1,15 @@
 # Target-Aware Composition Layout
 
-Status: proposed
+Status: accepted
 
 ## Problem
 
-The repository holds one composition per file at the repository root:
-`runtime-composition.windows.toml` and `runtime.windows.lock.json`. The filename
-slug (`windows`) is shorter and less precise than the canonical target
+The repository keeps each composition's inputs together. A filename slug such
+as `windows` is shorter and less precise than the canonical target
 (`windows-x86_64-msvc143-py313`), so a second Windows target — a different
-toolchain, OpenUSD version, or host ABI — has no unambiguous filename. The
+toolchain, OpenUSD version, or host ABI — needs an unambiguous directory. The
 [distribution design](distribution.md) requires each target to carry its own
-manifest, lock, evidence, and support statement.
+manifest, lock, metadata, evidence, and support statement.
 
 ## Canonical target identity
 
@@ -24,11 +23,11 @@ windows-x86_64-msvc143-py313
 
 `tools/runtime_metadata.py` already enforces this shape and rejects a target it
 cannot decompose, so an added target cannot silently acquire an ambiguous
-identity. The decomposed fields are published in `runtime-metadata.*.json` and
+identity. The decomposed fields are published in `targets/<target>/metadata.json` and
 constrained by
 [`schemas/runtime-metadata.v1.json`](../../schemas/runtime-metadata.v1.json).
 
-## Proposed layout
+## Layout
 
 ```text
 targets/<target>/composition.toml
@@ -57,7 +56,7 @@ tool hardcodes `windows`.
    `composition_digest`, and `runtime_digest` are unchanged. If OpenStrata
    derives any of them from the manifest filename or path, the layout change
    becomes a new release rather than a relocation.
-3. `runtime-metadata.*.json` is generated. After the move it is regenerated in
+3. `targets/<target>/metadata.json` is generated. After the move it is regenerated in
    the same commit, and `generated_by.inputs` records the new paths.
 4. One commit performs the move and the tooling update together so no
    intermediate commit has a lock that its validator cannot find.
@@ -70,8 +69,8 @@ ambiguity and needs no tooling change beyond the glob. It is rejected because
 each target grows more sibling files — manifest, lock, metadata, and any future
 per-target inputs — and a directory keeps those together.
 
-## Status and sequencing
+## Implementation status
 
-This layout is not implemented. It is scheduled after vector capabilities are
-composed, so that the first migration moves a composition whose contents are
-already settled.
+This layout is implemented for the released Windows target. The metadata and
+validation tools discover `targets/*/composition.toml`, derive sibling
+`lock.json` and `metadata.json` paths, and do not hardcode a platform slug.

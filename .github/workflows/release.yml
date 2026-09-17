@@ -36,7 +36,7 @@ jobs:
           git archive --format=tar.gz --prefix="usd-geospatial-runtime-${version}/" \
             -o "dist-release/usd-geospatial-runtime-${version}-src.tar.gz" "${GITHUB_REF_NAME}"
           cp LICENSE dist-release/
-          cp runtime-composition.*.toml runtime.*.lock.json runtime-metadata.*.json dist-release/
+          cp -r targets dist-release/
           python - "${GITHUB_REF_NAME}" <<'PY'
           import json
           from pathlib import Path
@@ -54,7 +54,7 @@ jobs:
           PY
           cp "docs/releases/v${version}.md" dist-release/RELEASE_NOTES.md
           cd dist-release
-          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\n' \
+          find . -type f ! -name SHA256SUMS -printf '%P\n' \
             | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
           sha256sum -c SHA256SUMS
       - name: Create draft GitHub release

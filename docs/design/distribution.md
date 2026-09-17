@@ -37,6 +37,6 @@ intended progression is Linux x86_64, macOS arm64, Python package UX, Node
 native support, and then a scoped Wasm experiment. Each step requires its own
 manifest, lock, acceptance evidence, and support statement.
 
-The current top-level Windows manifest and lock may move into target-aware
-directories only through a migration that preserves v0.1.0 reconstruction
-instructions and immutable release records.
+Each active target keeps its manifest, lock, and generated metadata in a
+target-aware directory. A layout migration must preserve historical release
+reconstruction instructions and immutable release records.
